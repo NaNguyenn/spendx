@@ -18,6 +18,7 @@ This is a **multi-context** repo — two deployable apps with their own vocabula
 /
 ├── CONTEXT-MAP.md
 ├── docs/adr/                          ← system-wide decisions
+├── designs/spendx-mock.pen            ← pen.dev UI design (design system + all screens)
 ├── backend/                           ← NestJS API
 │   ├── CONTEXT.md
 │   ├── docs/adr/                      ← API-specific decisions
