@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to a PR makes the first run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Path filtering lives here rather than in `on:` so that a skipped job still
+  # reports a conclusion — a required check that never runs blocks merges.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'mobile/**'
+              - 'backend/openapi.json'
+              - '.github/workflows/ci.yml'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: spendx
+          POSTGRES_PASSWORD: spendx
+          # The integration suite connects to this database by name; see
+          # backend/.env.test, which is also what pins the port below.
+          POSTGRES_DB: spendx_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U spendx"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Runs `prisma generate` via postinstall.
+      - run: npm ci
+
+      # Configuration is validated at boot, so the OpenAPI generator needs a
+      # complete environment even though it never opens a connection.
+      - run: cp .env.example .env
+
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+      # globalSetup loads .env.test and applies migrations before the suite.
+      - run: npm run test:e2e
+
+  # Its own job so that a mobile-only change — which could hand-edit
+  # schema.d.ts — is checked too. Runs the same Make target developers run.
+  contract:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      # Configuration is validated at boot, so the generator needs a complete
+      # environment even though it never opens a connection.
+      - run: cp .env.example .env
+        working-directory: backend
+
+      - run: make contract-check
+
+  mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test

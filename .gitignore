@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+
+# Agent-skill trees installed by tooling (e.g. prisma init) — not vendored here.
+.agents/
+.windsurf/

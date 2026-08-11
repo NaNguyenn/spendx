@@ -1,0 +1,25 @@
+#!/bin/sh
+# Formats and lints staged files only, per app. Wired by `make hooks`
+# (git config core.hooksPath .githooks).
+#
+# husky would normally own this, but husky installs itself from a package.json
+# and this repo deliberately has none at the root (ADR-0007) — so the hook is
+# checked in directly and calls each app's lint-staged.
+set -e
+
+root=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+for app in backend mobile; do
+	case "$staged" in
+	*"$app/"*) ;;
+	*) continue ;;
+	esac
+
+	if [ ! -x "$root/$app/node_modules/.bin/lint-staged" ]; then
+		echo "pre-commit: $app/node_modules is missing — run 'make setup'" >&2
+		exit 1
+	fi
+
+	(cd "$root/$app" && ./node_modules/.bin/lint-staged)
+done

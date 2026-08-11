@@ -1,0 +1,87 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Round-trips a query to Postgres, so a green response means the connection is genuinely usable rather than merely configured.",
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthUnavailableDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness of the API and its database",
+        "tags": ["health"]
+      }
+    }
+  },
+  "info": {
+    "title": "spendx API",
+    "description": "The API owning the spendx domain model: users, expenses, and the social graph between them.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "example": "ok"
+          },
+          "database": {
+            "type": "string",
+            "enum": ["up"],
+            "example": "up"
+          }
+        },
+        "required": ["status", "database"]
+      },
+      "HealthUnavailableDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["error"],
+            "example": "error"
+          },
+          "database": {
+            "type": "string",
+            "enum": ["down"],
+            "example": "down"
+          }
+        },
+        "required": ["status", "database"]
+      }
+    }
+  }
+}
