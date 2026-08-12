@@ -47,6 +47,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
+    "pretypecheck": "node ./scripts/ensure-expo-env-types.js",
     "typecheck": "tsc --noEmit",
     "api:types": "npm --prefix ../backend run api:types"
   },

@@ -26,8 +26,8 @@
     "db:reset": "prisma migrate reset --force",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate",
-    "openapi:generate": "ts-node src/scripts/generate-openapi.ts",
-    "api:types": "openapi-typescript openapi.json -o ../mobile/src/api/schema.d.ts"
+    "openapi:generate": "ts-node src/scripts/generate-openapi.ts && prettier --write openapi.json",
+    "api:types": "openapi-typescript openapi.json -o ../mobile/src/api/schema.d.ts && prettier --write ../mobile/src/api/schema.d.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
