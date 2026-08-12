@@ -20,19 +20,49 @@ datasource db {
   provider = "postgresql"
 }
 
+/// One of the ≈10 curated currencies (see backend/CONTEXT.md — Supported
+/// Currency) a User may pick for an Original Amount or as Preferred Currency.
+/// Mirrors src/domain/currency.ts.
+enum SupportedCurrency {
+  VND
+  USD
+  EUR
+  GBP
+  JPY
+  SGD
+  AUD
+  CAD
+  KRW
+  THB
+
+  @@map("supported_currency")
+}
+
+/// A User's account-level language (see backend/CONTEXT.md — Locale). Mirrors
+/// src/domain/locale.ts.
+enum Locale {
+  en
+  vi
+
+  @@map("locale")
+}
+
 /// A person with a spendx account.
 ///
-/// Skeleton only: this table exists so the development environment (#18) can
-/// prove migrate → seed → test → truncate end to end. Authentication columns
-/// (password hash, verification state, sessions) and the account settings
-/// Preferred Currency and Locale belong to #2 and are added there.
+/// `passwordHash` is a self-describing scrypt string (see
+/// src/auth/scrypt-password-hasher.ts); the password itself is never stored.
+/// `preferredCurrency` and `locale` are the account-level Preferred Currency
+/// and Locale a User picks at sign-up.
 model User {
-  id          String   @id @default(uuid(7))
-  email       String   @unique
-  username    String   @unique
-  displayName String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String            @id @default(uuid(7))
+  email             String            @unique
+  username          String            @unique
+  displayName       String
+  passwordHash      String
+  preferredCurrency SupportedCurrency
+  locale            Locale
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@map("users")
 }

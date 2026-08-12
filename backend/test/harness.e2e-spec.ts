@@ -18,6 +18,9 @@ describe('integration harness', () => {
         email: 'harness@example.com',
         username: 'harness',
         displayName: 'Harness',
+        passwordHash: 'not-a-real-hash',
+        preferredCurrency: 'USD',
+        locale: 'en',
       },
     });
 

@@ -1,6 +1,7 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Design tokens for the app, taken from the `Design System — spendx` sheet in
+ * designs/spendx-mock.pen (light / dark). `Colors[scheme]` is the accessor
+ * every themed component uses — see hooks/use-theme.ts.
  */
 
 import '@/global.css';
@@ -9,18 +10,48 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    background: '#F4F5F9',
+    surface: '#FFFFFF',
+    surface2: '#ECEDF3',
+    surface3: '#E2E4ED',
+    border: '#E3E5EE',
+    borderStrong: '#CFD2DF',
+    text: '#101219',
+    textSecondary: '#666C7E',
+    textTertiary: '#9BA1B2',
+    accent: '#5B3DF5',
+    accentPress: '#4A2FD6',
+    accentSoft: '#E9E5FE',
+    onAccent: '#FFFFFF',
+    success: '#0EA46E',
+    successSoft: '#DCF6EC',
+    danger: '#E23D5A',
+    dangerSoft: '#FDE6EA',
+    warn: '#E08A00',
+    visPrivate: '#5A6070',
+    visPrivateSoft: '#E6E8EF',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    background: '#0D0E13',
+    surface: '#171921',
+    surface2: '#20232D',
+    surface3: '#292D39',
+    border: '#2B2F3B',
+    borderStrong: '#3A3F4E',
+    text: '#F5F6FA',
+    textSecondary: '#9CA2B4',
+    textTertiary: '#6C7284',
+    accent: '#8570FF',
+    accentPress: '#6E58F0',
+    accentSoft: '#241F4D',
+    onAccent: '#0D0E13',
+    success: '#2ED89A',
+    successSoft: '#0E3A2B',
+    danger: '#FF6B84',
+    dangerSoft: '#40151F',
+    warn: '#FFB833',
+    visPrivate: '#98A0B5',
+    visPrivateSoft: '#262A34',
   },
 } as const;
 
@@ -51,15 +82,26 @@ export const Fonts = Platform.select({
   },
 });
 
+/** `sp-1..sp-8` from the design system. */
 export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  sp1: 4,
+  sp2: 8,
+  sp3: 12,
+  sp4: 16,
+  sp5: 20,
+  sp6: 24,
+  sp7: 32,
+  sp8: 40,
+} as const;
+
+/** `r-sm..r-full` from the design system. */
+export const Radii = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 22,
+  full: 999,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const MaxContentWidth = 480;

@@ -31,6 +31,133 @@
         "summary": "Liveness of the API and its database",
         "tags": ["health"]
       }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "UsersController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's own account",
+        "tags": ["users"]
+      }
+    },
+    "/users/{username}": {
+      "get": {
+        "description": "Exact match only — see backend/CONTEXT.md on Username.",
+        "operationId": "UsersController_getByUsername",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Look up a User by Username",
+        "tags": ["users"]
+      }
+    },
+    "/auth/sign-up": {
+      "post": {
+        "description": "Works immediately — there is no verification gate.",
+        "operationId": "AuthController_signUp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email or Username already taken"
+          }
+        },
+        "summary": "Create an account",
+        "tags": ["auth"]
+      }
+    },
+    "/auth/sign-in": {
+      "post": {
+        "operationId": "AuthController_signIn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid email or password"
+          }
+        },
+        "summary": "Start a token session",
+        "tags": ["auth"]
+      }
     }
   },
   "info": {
@@ -81,6 +208,156 @@
           }
         },
         "required": ["status", "database"]
+      },
+      "SupportedCurrency": {
+        "type": "string",
+        "enum": [
+          "VND",
+          "USD",
+          "EUR",
+          "GBP",
+          "JPY",
+          "SGD",
+          "AUD",
+          "CAD",
+          "KRW",
+          "THB"
+        ]
+      },
+      "Locale": {
+        "type": "string",
+        "enum": ["en", "vi"]
+      },
+      "PrivateUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "description": "The User's unique public handle."
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "preferredCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "locale": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Locale"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "displayName",
+          "email",
+          "preferredCurrency",
+          "locale",
+          "createdAt"
+        ]
+      },
+      "PublicUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "description": "The User's unique public handle."
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "username", "displayName"]
+      },
+      "SignUpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "minh@spendx.app"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "username": {
+            "type": "string",
+            "example": "minhtran",
+            "description": "The User's unique public handle: 3-30 characters, lowercase letters, digits, and underscores."
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Minh Trần"
+          },
+          "preferredCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "locale": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Locale"
+              }
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "username",
+          "displayName",
+          "preferredCurrency",
+          "locale"
+        ]
+      },
+      "AuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/PrivateUserDto"
+          }
+        },
+        "required": ["accessToken", "user"]
+      },
+      "SignInDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "minh@spendx.app"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": ["email", "password"]
       }
     }
   }

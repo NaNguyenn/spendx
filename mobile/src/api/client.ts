@@ -17,20 +17,36 @@ export class ApiError extends Error {
   }
 }
 
-// Routes without a GET are typed `get?: never`, so requiring an object here
-// narrows the union to exactly the ones that have one.
+// Routes without a GET/POST are typed `get?: never`/`post?: never`, so
+// requiring an object here narrows the union to exactly the ones that have one.
 type PathsWithGet = {
   [P in keyof paths]: paths[P] extends { get: object } ? P : never;
 }[keyof paths];
 
-type OkJson<T> = T extends {
-  responses: { 200: { content: { 'application/json': infer Body } } };
+type PathsWithPost = {
+  [P in keyof paths]: paths[P] extends { post: object } ? P : never;
+}[keyof paths];
+
+// Success is 200 for GETs, 201 for the POSTs that create something (sign-up) —
+// checked as a union so both kinds of endpoint share one helper. Exported so
+// callers can name a route's response/request shape without hand-declaring a
+// second copy of it (see docs/adr/0007).
+export type OkJson<T> = T extends { responses: infer R }
+  ? R extends { 200: { content: { 'application/json': infer Body200 } } }
+    ? Body200
+    : R extends { 201: { content: { 'application/json': infer Body201 } } }
+      ? Body201
+      : never
+  : never;
+
+export type JsonRequestBody<T> = T extends {
+  requestBody: { content: { 'application/json': infer Body } };
 }
   ? Body
   : never;
 
 export interface RequestOptions {
-  /** Bearer token for authenticated endpoints (sessions arrive with #2). */
+  /** Bearer token for authenticated endpoints. */
   token?: string;
   signal?: AbortSignal;
 }
@@ -40,6 +56,18 @@ export async function apiGet<P extends PathsWithGet>(
   options: RequestOptions = {},
 ): Promise<OkJson<paths[P]['get']>> {
   return request(path as string, { method: 'GET' }, options);
+}
+
+export async function apiPost<P extends PathsWithPost>(
+  path: P,
+  body: JsonRequestBody<paths[P]['post']>,
+  options: RequestOptions = {},
+): Promise<OkJson<paths[P]['post']>> {
+  return request(
+    path as string,
+    { method: 'POST', body: JSON.stringify(body) },
+    options,
+  );
 }
 
 async function request<T>(

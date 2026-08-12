@@ -17,8 +17,7 @@ export const envSchema = z.object({
 
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 
-  // Read by #2 (accounts & sign-in). Declared now so a deployment cannot be
-  // configured half-way and discover it at sign-in time.
+  // Signs and verifies session tokens (src/auth).
   JWT_SECRET: z.string().min(1),
   JWT_EXPIRES_IN: z.string().min(1).default('90d'),
 
