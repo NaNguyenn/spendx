@@ -9,12 +9,14 @@ import {
 
 import {
   apiGet,
+  apiPatch,
   apiPost,
   type JsonRequestBody,
   type OkJson,
 } from '@/api/client';
 import type { paths } from '@/api/schema';
 import { useStorageState } from '@/hooks/use-storage-state';
+import type { SupportedLocale } from '@/lib/locale';
 
 /**
  * Loads any persisted token at startup, exposes the signed-in user, and
@@ -38,6 +40,14 @@ interface SessionContextValue {
   signUp(input: SignUpInput): Promise<void>;
   signIn(input: SignInInput): Promise<void>;
   signOut(): void;
+  /**
+   * Persists the account's Locale server-side (it drives future emails —
+   * backend/CONTEXT.md's Locale entry) and updates `user`, the single source
+   * of truth TranslationProvider reads its active locale from. Throws on
+   * failure rather than swallowing it, so the caller can show the rejected
+   * change instead of silently keeping a Locale the server didn't accept.
+   */
+  updateLocale(locale: SupportedLocale): Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -104,8 +114,15 @@ export function SessionProvider({ children }: PropsWithChildren) {
         setToken(null);
         setUser(null);
       },
+      async updateLocale(locale) {
+        if (!token) {
+          throw new Error('Cannot update locale while signed out');
+        }
+        const updated = await apiPatch('/users/me', { locale }, { token });
+        setUser(updated);
+      },
     }),
-    [user, isTokenLoading, isResolvingUser, setToken],
+    [user, isTokenLoading, isResolvingUser, setToken, token],
   );
 
   return (

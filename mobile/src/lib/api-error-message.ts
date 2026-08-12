@@ -1,44 +1,51 @@
 import { ApiError } from '@/api/client';
-
-const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
-const NETWORK_MESSAGE =
-  "Couldn't reach the server. Check your connection and try again.";
+import type { TranslationKey } from '@/i18n/en';
 
 /**
  * Nest's default error body is `{ statusCode, message, error }`, where
  * `message` is a string (our hand-written checks, e.g. "Invalid email or
- * password") or a string[] (class-validator's per-field messages). Turns
- * either into one line fit for a form's error banner.
+ * password") or a string[] (class-validator's per-field messages). The API
+ * doesn't localize that text (see backend/CONTEXT.md's Locale entry — it
+ * covers UI strings and templates, not this), so it is relayed as-is rather
+ * than run through translation; only this file's own fallbacks (no body, no
+ * network) are `TranslationKey`s the UI translates. Keeps this pure — no
+ * dependency on a translation provider — while still being drift-proof
+ * against a renamed/removed key, via the `TranslationKey` import.
  */
-export function getErrorMessage(error: unknown): string {
+export type ApiErrorMessage =
+  { kind: 'server'; text: string } | { kind: 'key'; key: TranslationKey };
+
+export function getErrorMessage(error: unknown): ApiErrorMessage {
   if (error instanceof ApiError) {
     const body = error.body;
     if (body && typeof body === 'object' && 'message' in body) {
       const message = (body as { message?: unknown }).message;
       if (typeof message === 'string' && message.length > 0) {
-        return message;
+        return { kind: 'server', text: message };
       }
       if (
         Array.isArray(message) &&
         message.every((entry) => typeof entry === 'string')
       ) {
-        return message.join(' ');
+        return { kind: 'server', text: message.join(' ') };
       }
     }
-    return GENERIC_MESSAGE;
+    return { kind: 'key', key: 'apiError.generic' };
   }
 
   if (error instanceof TypeError) {
     // What `fetch` rejects with when it can't reach the server at all.
-    return NETWORK_MESSAGE;
+    return { kind: 'key', key: 'apiError.network' };
   }
 
-  return GENERIC_MESSAGE;
+  return { kind: 'key', key: 'apiError.generic' };
 }
 
 /**
  * Which Sign Up field a 409 conflict names, so the screen can attach the
- * error to that field instead of only showing a banner.
+ * error to that field instead of only showing a banner. Only meaningful for
+ * a server-relayed message — a screen should not call this on a `'key'`
+ * result.
  *
  * The API answers a duplicate with exactly "Email already registered" or
  * "Username already taken" (backend/src/auth/auth.service.ts); anything else

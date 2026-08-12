@@ -38,7 +38,8 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /** Update the caller's own account */
+    patch: operations['UsersController_updateMe'];
     trace?: never;
   };
   '/users/{username}': {
@@ -151,6 +152,9 @@ export interface components {
       /** @description ISO 8601 */
       createdAt: string;
     };
+    UpdateMeDto: {
+      locale: components['schemas']['Locale'];
+    };
     PublicUserDto: {
       id: string;
       /** @description The User's unique public handle. */
@@ -224,6 +228,29 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PrivateUserDto'];
+        };
+      };
+    };
+  };
+  UsersController_updateMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateMeDto'];
+      };
+    };
     responses: {
       200: {
         headers: {

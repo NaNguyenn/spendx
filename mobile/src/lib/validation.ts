@@ -1,9 +1,16 @@
+import type { TranslationKey } from '@/i18n/en';
+
 /**
  * The client-side mirror of the rules the API enforces on sign-up
  * (backend/src/auth/dto/sign-up.dto.ts). Pure functions only, so a screen can
  * block a submit before spending a round-trip on it — the server remains the
  * source of truth and re-validates everything, so the worst a drift here can
  * do is show a message the server would also have produced.
+ *
+ * Errors are returned as `TranslationKey`s, not strings — this file has no
+ * locale to render in and no business deciding one; the UI calls `t()` on
+ * whatever key comes back. Only a type-level import from i18n/en, so this
+ * stays pure and its tests stay meaningful without a translation provider.
  */
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,27 +57,26 @@ export interface SignUpFormValues {
 }
 
 export interface SignUpFormErrors {
-  displayName?: string;
-  username?: string;
-  email?: string;
-  password?: string;
+  displayName?: TranslationKey;
+  username?: TranslationKey;
+  email?: TranslationKey;
+  password?: TranslationKey;
 }
 
 export function validateSignUpForm(values: SignUpFormValues): SignUpFormErrors {
   const errors: SignUpFormErrors = {};
 
   if (!isValidDisplayName(values.displayName)) {
-    errors.displayName = 'Enter a display name up to 50 characters.';
+    errors.displayName = 'validation.displayName';
   }
   if (!isValidUsername(values.username)) {
-    errors.username =
-      '3–30 characters: lowercase letters, numbers, and underscore only.';
+    errors.username = 'validation.username';
   }
   if (!isValidEmail(values.email)) {
-    errors.email = 'Enter a valid email address.';
+    errors.email = 'validation.email';
   }
   if (!isValidPassword(values.password)) {
-    errors.password = 'Password must be 8–128 characters.';
+    errors.password = 'validation.password';
   }
 
   return errors;

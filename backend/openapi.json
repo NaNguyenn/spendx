@@ -55,6 +55,39 @@
         ],
         "summary": "The caller's own account",
         "tags": ["users"]
+      },
+      "patch": {
+        "operationId": "UsersController_updateMe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update the caller's own account",
+        "tags": ["users"]
       }
     },
     "/users/{username}": {
@@ -272,6 +305,19 @@
           "locale",
           "createdAt"
         ]
+      },
+      "UpdateMeDto": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Locale"
+              }
+            ]
+          }
+        },
+        "required": ["locale"]
       },
       "PublicUserDto": {
         "type": "object",

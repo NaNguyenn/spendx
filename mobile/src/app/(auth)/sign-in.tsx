@@ -11,11 +11,13 @@ import {
 import { PrimaryButton } from '@/components/form/primary-button';
 import { SecondaryButton } from '@/components/form/secondary-button';
 import { TextField } from '@/components/form/text-field';
+import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
 
 export default function SignInScreen() {
   const { signIn } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +27,7 @@ export default function SignInScreen() {
   const onSubmit = async () => {
     setError(null);
     if (!email.trim() || !password) {
-      setError('Enter your email and password.');
+      setError(t('auth.signIn.missingFields'));
       return;
     }
 
@@ -33,7 +35,8 @@ export default function SignInScreen() {
     try {
       await signIn({ email: email.trim(), password });
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      const result = getErrorMessage(submitError);
+      setError(result.kind === 'server' ? result.text : t(result.key));
     } finally {
       setIsSubmitting(false);
     }
@@ -41,12 +44,12 @@ export default function SignInScreen() {
 
   return (
     <AuthScreen
-      title="Welcome back"
-      subtitle="Log your spending, compare only what you choose to share."
+      title={t('auth.signIn.title')}
+      subtitle={t('auth.signIn.subtitle')}
     >
       <FieldGroup>
         <TextField
-          label="Email"
+          label={t('auth.signIn.emailLabel')}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -55,7 +58,7 @@ export default function SignInScreen() {
           textContentType="emailAddress"
         />
         <TextField
-          label="Password"
+          label={t('auth.signIn.passwordLabel')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -67,7 +70,7 @@ export default function SignInScreen() {
       <FormError message={error} />
 
       <PrimaryButton
-        label="Sign in"
+        label={t('auth.signIn.submit')}
         onPress={onSubmit}
         loading={isSubmitting}
       />
@@ -75,7 +78,7 @@ export default function SignInScreen() {
       <OrDivider />
 
       <SecondaryButton
-        label="Create an account"
+        label={t('auth.signIn.createAccount')}
         onPress={() => router.push('/sign-up')}
       />
     </AuthScreen>

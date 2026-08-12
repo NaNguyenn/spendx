@@ -27,6 +27,10 @@ type PathsWithPost = {
   [P in keyof paths]: paths[P] extends { post: object } ? P : never;
 }[keyof paths];
 
+type PathsWithPatch = {
+  [P in keyof paths]: paths[P] extends { patch: object } ? P : never;
+}[keyof paths];
+
 // Success is 200 for GETs, 201 for the POSTs that create something (sign-up) —
 // checked as a union so both kinds of endpoint share one helper. Exported so
 // callers can name a route's response/request shape without hand-declaring a
@@ -66,6 +70,18 @@ export async function apiPost<P extends PathsWithPost>(
   return request(
     path as string,
     { method: 'POST', body: JSON.stringify(body) },
+    options,
+  );
+}
+
+export async function apiPatch<P extends PathsWithPatch>(
+  path: P,
+  body: JsonRequestBody<paths[P]['patch']>,
+  options: RequestOptions = {},
+): Promise<OkJson<paths[P]['patch']>> {
+  return request(
+    path as string,
+    { method: 'PATCH', body: JSON.stringify(body) },
     options,
   );
 }

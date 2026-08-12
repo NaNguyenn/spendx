@@ -33,10 +33,11 @@ export function localeDisplayName(locale: SupportedLocale): string {
 }
 
 /**
- * Maps the device's language, in priority order, to one of the two Locales
- * this ticket supports — defaulting to `en` for anything else. This is the
- * *only* thing this ticket does with device language: no switcher, no
- * translated UI (both are later tickets).
+ * Maps the device's language, in priority order, to a supported Locale,
+ * defaulting to `en` for anything else. Two callers: sign-up, which sends
+ * this as the new account's Locale, and TranslationProvider, which uses it as
+ * the active locale while signed out — once there is a session, the account's
+ * own Locale wins and the device language stops mattering.
  */
 export function resolveSignupLocale(
   languageCodes: readonly (string | null | undefined)[],

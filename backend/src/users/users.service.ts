@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrivateUserDto } from './dto/private-user.dto';
 import { PublicUserDto } from './dto/public-user.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 import { toPrivateUser, toPublicUser } from './user-view';
 import { UsersRepository } from './users.repository';
 
@@ -14,6 +15,15 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+    return toPrivateUser(user);
+  }
+
+  // The caller reaches here only through JwtAuthGuard, which already
+  // resolved `userId` to a live User — no NotFoundException branch needed.
+  async updateMe(userId: string, dto: UpdateMeDto): Promise<PrivateUserDto> {
+    const user = await this.usersRepository.update(userId, {
+      locale: dto.locale,
+    });
     return toPrivateUser(user);
   }
 

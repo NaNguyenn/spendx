@@ -7,6 +7,7 @@ import { fieldStyles } from '@/components/form/field-styles';
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/i18n/translation-context';
 
 export interface SelectFieldOption<T extends string> {
   value: T;
@@ -40,6 +41,7 @@ export function SelectField<T extends string>({
   onChange,
 }: SelectFieldProps<T>) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
 
@@ -70,7 +72,7 @@ export function SelectField<T extends string>({
         onRequestClose={() => setIsOpen(false)}
       >
         <Pressable
-          accessibilityLabel="Close"
+          accessibilityLabel={t('common.close')}
           style={styles.backdrop}
           onPress={() => setIsOpen(false)}
         />

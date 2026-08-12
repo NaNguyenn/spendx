@@ -164,6 +164,22 @@ describe('validateSignUpForm', () => {
       email: 'not-an-email',
     });
 
-    expect(errors).toEqual({ email: expect.any(String) });
+    expect(errors).toEqual({ email: 'validation.email' });
+  });
+
+  it('returns the translation key for each field, not a message', () => {
+    const errors = validateSignUpForm({
+      displayName: '',
+      username: 'ab',
+      email: 'not-an-email',
+      password: 'short',
+    });
+
+    expect(errors).toEqual({
+      displayName: 'validation.displayName',
+      username: 'validation.username',
+      email: 'validation.email',
+      password: 'validation.password',
+    });
   });
 });

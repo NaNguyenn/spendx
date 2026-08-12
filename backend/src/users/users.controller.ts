@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -8,6 +8,7 @@ import {
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { PrivateUserDto } from './dto/private-user.dto';
 import { PublicUserDto } from './dto/public-user.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
@@ -24,6 +25,18 @@ export class UsersController {
   @ApiOkResponse({ type: PrivateUserDto })
   getMe(@CurrentUserId() userId: string): Promise<PrivateUserDto> {
     return this.usersService.getPrivateProfile(userId);
+  }
+
+  // Only Locale today (see UpdateMeDto); this stays the one route Preferred
+  // Currency and Display Name land on later rather than each growing its own.
+  @Patch('me')
+  @ApiOperation({ summary: "Update the caller's own account" })
+  @ApiOkResponse({ type: PrivateUserDto })
+  updateMe(
+    @CurrentUserId() userId: string,
+    @Body() dto: UpdateMeDto,
+  ): Promise<PrivateUserDto> {
+    return this.usersService.updateMe(userId, dto);
   }
 
   // When Blocks arrive, this becomes a query surface they must filter: per

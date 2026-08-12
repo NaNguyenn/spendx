@@ -1,16 +1,25 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Fragment, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+const CHEVRON_ICON: SymbolViewProps['name'] = {
+  ios: 'chevron.right',
+  android: 'chevron_right',
+  web: 'chevron_right',
+};
 
 export interface ProfileRowItem {
   key: string;
   icon: SymbolViewProps['name'];
   label: string;
   value: string;
+  /** Present only for rows this ticket makes editable (currently just Language) — see profile.tsx. */
+  onPress?: () => void;
+  disabled?: boolean;
 }
 
 interface ProfileSectionProps {
@@ -35,7 +44,13 @@ export function ProfileSection({ caption, rows }: ProfileSectionProps) {
                 style={[styles.divider, { backgroundColor: theme.border }]}
               />
             ) : null}
-            <ProfileRow icon={row.icon} label={row.label} value={row.value} />
+            <ProfileRow
+              icon={row.icon}
+              label={row.label}
+              value={row.value}
+              onPress={row.onPress}
+              disabled={row.disabled}
+            />
           </Fragment>
         ))}
       </View>
@@ -47,15 +62,19 @@ function ProfileRow({
   icon,
   label,
   value,
+  onPress,
+  disabled,
 }: {
   icon: SymbolViewProps['name'];
   label: string;
   value: ReactNode;
+  onPress?: () => void;
+  disabled?: boolean;
 }) {
   const theme = useTheme();
 
-  return (
-    <View style={styles.row}>
+  const content = (
+    <>
       <View style={[styles.iconDisc, { backgroundColor: theme.surface2 }]}>
         <SymbolView name={icon} size={16} tintColor={theme.textSecondary} />
       </View>
@@ -67,7 +86,29 @@ function ProfileRow({
       >
         {value}
       </ThemedText>
-    </View>
+      {onPress ? (
+        <SymbolView
+          name={CHEVRON_ICON}
+          size={16}
+          tintColor={theme.textTertiary}
+        />
+      ) : null}
+    </>
+  );
+
+  if (!onPress) {
+    return <View style={styles.row}>{content}</View>;
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
+      {content}
+    </Pressable>
   );
 }
 
@@ -105,5 +146,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     maxWidth: '45%',
+  },
+  pressed: {
+    opacity: 0.6,
   },
 });

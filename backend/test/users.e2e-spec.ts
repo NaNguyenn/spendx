@@ -97,6 +97,121 @@ describe('users', () => {
     });
   });
 
+  describe('PATCH /users/me', () => {
+    it('rejects a request with no token', async () => {
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .send({ locale: 'vi' })
+        .expect(401);
+    });
+
+    it('rejects a garbage token', async () => {
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', 'Bearer not-a-real-token')
+        .send({ locale: 'vi' })
+        .expect(401);
+    });
+
+    it('changes the Locale and returns the PrivateUser reflecting it', async () => {
+      const { response } = await signUp(app, { locale: 'en' });
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ locale: 'vi' });
+
+      expect(patched.status).toBe(200);
+      expect(privateUserBody(patched).locale).toBe('vi');
+      expect(patched.text).not.toContain('passwordHash');
+
+      // The change persists — a fresh GET agrees with the PATCH response.
+      const me = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(privateUserBody(me).locale).toBe('vi');
+    });
+
+    it('leaves the rest of the account untouched', async () => {
+      const { response, body } = await signUp(app, { locale: 'en' });
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ locale: 'vi' });
+
+      expect(privateUserBody(patched)).toMatchObject({
+        username: body.username,
+        displayName: body.displayName,
+        email: body.email,
+        preferredCurrency: body.preferredCurrency,
+      });
+    });
+
+    it('rejects an unsupported Locale', async () => {
+      const { response } = await signUp(app);
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ locale: 'fr' });
+
+      expect(patched.status).toBe(400);
+    });
+
+    it('rejects a non-string Locale', async () => {
+      const { response } = await signUp(app);
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ locale: 1 });
+
+      expect(patched.status).toBe(400);
+    });
+
+    it('rejects a missing Locale', async () => {
+      const { response } = await signUp(app);
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+
+      expect(patched.status).toBe(400);
+    });
+
+    // The route is named for the whole account, so it must never become a
+    // blind-update vector for fields it does not own. That it isn't rests on
+    // `forbidNonWhitelisted` in configureApp — global config a later refactor
+    // could loosen without touching this module, hence a test here and not a
+    // comment there.
+    it('refuses to update a field outside UpdateMeDto', async () => {
+      const { response, body } = await signUp(app);
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ locale: 'vi', email: 'attacker@example.com' });
+
+      expect(patched.status).toBe(400);
+
+      // Rejected outright, not silently stripped down to the Locale — the
+      // account is exactly as it was.
+      const me = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(privateUserBody(me).email).toBe(body.email);
+      expect(privateUserBody(me).locale).toBe(body.locale);
+    });
+  });
+
   describe('GET /users/:username', () => {
     it('returns a PublicUser with no email anywhere in the response', async () => {
       const { response: viewerSignUp } = await signUp(app);

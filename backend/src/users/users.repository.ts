@@ -13,6 +13,12 @@ export interface CreateUserData {
   locale: Locale;
 }
 
+// Only Locale today — `PATCH /users/me` grows this interface (Preferred
+// Currency, Display Name) as later tickets add the fields it may update.
+export interface UpdateUserData {
+  locale: Locale;
+}
+
 /**
  * All persistence for the User model. Nothing above this class knows Prisma's
  * query API — callers pass and receive domain values.
@@ -39,5 +45,9 @@ export class UsersRepository {
 
   create(data: CreateUserData): Promise<User> {
     return this.prisma.user.create({ data });
+  }
+
+  update(id: string, data: UpdateUserData): Promise<User> {
+    return this.prisma.user.update({ where: { id }, data });
   }
 }

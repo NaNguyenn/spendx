@@ -12,6 +12,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/i18n/translation-context';
 
 /**
  * The chrome every Auth screen shares: a keyboard-aware, centred, scrollable
@@ -65,12 +66,13 @@ export function FieldGroup({ children }: PropsWithChildren) {
 /** The "or" rule between the primary action and the way to the other screen. */
 export function OrDivider() {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.divider}>
       <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
       <ThemedText themeColor="textTertiary" style={styles.dividerText}>
-        or
+        {t('auth.or')}
       </ThemedText>
       <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
     </View>
