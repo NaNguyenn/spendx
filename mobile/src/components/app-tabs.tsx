@@ -221,9 +221,21 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 2,
     borderRadius: Radii.full,
+    // Required on Android, not cosmetic. Without it the focused background is
+    // painted by a drawable that honours the radius on first draw but not on
+    // redraw, so the pill was round only on whichever tab was focused at
+    // mount and turned square as soon as you switched tabs. Clipping to the
+    // view's outline makes the rounding survive every re-render.
+    overflow: 'hidden',
   },
   tabLabel: {
     fontSize: 10,
+    // Must be set explicitly: ThemedText's `default` type ships lineHeight 21
+    // for its 15px font, and overriding only fontSize leaves that 21dp line
+    // box behind. That inflates the focused pill to 59dp inside a 66dp bar,
+    // where its fully-rounded end collides with the bar's own corner radius.
+    // At 12 the pill is the design's ~50dp, nested with room to spare.
+    lineHeight: 12,
     fontWeight: '600',
   },
   tabLabelFocused: {
