@@ -47,6 +47,36 @@ enum Locale {
   @@map("locale")
 }
 
+/// One of the fixed, app-curated spending kinds (see backend/CONTEXT.md —
+/// Category). Language-neutral slugs: labels are localized client-side, so
+/// the API never returns a human label. Mirrors src/domain/category.ts.
+///
+/// Wire-form note (Category and Visibility share this convention): both are
+/// app-invented vocabularies, not external standards like ISO currency codes,
+/// so both use lower_snake_case slugs — distinct from SupportedCurrency's
+/// uppercase ISO codes and consistent with Locale's lowercase codes, and
+/// unambiguous for the multi-word case (`friend_only`).
+enum Category {
+  housing
+  food
+  leisure
+  investment
+  other
+
+  @@map("category")
+}
+
+/// Who may see an Expense (see backend/CONTEXT.md — Visibility). See
+/// Category above for the shared slug convention. Mirrors
+/// src/domain/visibility.ts.
+enum Visibility {
+  private
+  friend_only
+  public
+
+  @@map("visibility")
+}
+
 /// A person with a spendx account.
 ///
 /// `passwordHash` is a self-describing scrypt string (see
@@ -64,5 +94,65 @@ model User {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  expenses Expense[]
+
   @@map("users")
+}
+
+/// A single spending record logged by a User (see backend/CONTEXT.md —
+/// Expense). See docs/adr/0001 and 0002 for the two-stage conversion model
+/// this schema implements.
+///
+/// `originalAmount`/`originalCurrency` are the Original Amount exactly as
+/// entered — never altered. `convertedAmount`/`convertedCurrency` are the
+/// Converted Amount: the Original Amount converted into the owner's
+/// Preferred Currency at the Daily Rate of `loggedAt`'s calendar date, then
+/// frozen (recomputed only when the owner changes Preferred Currency — a
+/// later ticket). `loggedAt` anchors the rate and is immutable; `expenseDate`
+/// drives grouping only and never affects conversion (ADR-0002).
+///
+/// Money columns are Decimal(20,4): up to 16 integer digits and 4 decimal
+/// places, generous enough for VND-scale amounts without ever being a Float.
+model Expense {
+  id                String            @id @default(uuid(7))
+  ownerId           String
+  owner             User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  description       String
+  originalAmount    Decimal           @db.Decimal(20, 4)
+  originalCurrency  SupportedCurrency
+  convertedAmount   Decimal           @db.Decimal(20, 4)
+  convertedCurrency SupportedCurrency
+  category          Category
+  visibility        Visibility
+  expenseDate       DateTime          @db.Date
+  loggedAt          DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Backs "list the owner's own expenses, newest first" (GET /expenses).
+  @@index([ownerId, loggedAt])
+  @@map("expenses")
+}
+
+/// The exchange rate for a currency pair on a calendar date (see
+/// backend/CONTEXT.md — Daily Rate), snapshotted once daily from an external
+/// provider into this table — conversion (src/daily-rates/conversion.service.ts)
+/// only ever reads this table, never the provider, per ADR-0001.
+///
+/// `rate` is quote-per-base: `amount(baseCurrency) * rate = amount(quoteCurrency)`.
+/// The unique index on (base, quote, date) is also the index the "most recent
+/// rate on or before this date" fallback scans — base and quote pin an exact
+/// equality prefix, and rate_date sorts last, so `ORDER BY rate_date DESC
+/// LIMIT 1` is a cheap ordered scan of that index rather than a table scan.
+model DailyRate {
+  id            String            @id @default(uuid(7))
+  baseCurrency  SupportedCurrency
+  quoteCurrency SupportedCurrency
+  rateDate      DateTime          @db.Date
+  // Generous scale: JPY/VND-scale rates need headroom on both sides of the
+  // point that a 4-decimal money column doesn't.
+  rate          Decimal           @db.Decimal(24, 10)
+  createdAt     DateTime          @default(now())
+
+  @@unique([baseCurrency, quoteCurrency, rateDate])
+  @@map("daily_rates")
 }

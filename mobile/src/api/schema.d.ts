@@ -99,6 +99,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/expenses': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The caller's own Expenses
+     * @description Every Visibility, newest logged first. Owner-only for now.
+     */
+    get: operations['ExpensesController_findAll'];
+    put?: never;
+    /** Log an Expense */
+    post: operations['ExpensesController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -183,6 +204,52 @@ export interface components {
       /** @example minh@spendx.app */
       email: string;
       password: string;
+    };
+    /** @enum {string} */
+    Category: 'housing' | 'food' | 'leisure' | 'investment' | 'other';
+    /** @enum {string} */
+    Visibility: 'private' | 'friend_only' | 'public';
+    CreateExpenseDto: {
+      /** @example Coffee with a friend */
+      description: string;
+      /**
+       * @description The Original Amount, exactly as entered: a positive decimal string with at most 4 decimal places. Never a JSON number.
+       * @example 45000.0000
+       */
+      originalAmount: string;
+      originalCurrency: components['schemas']['SupportedCurrency'];
+      category: components['schemas']['Category'];
+      visibility: components['schemas']['Visibility'];
+      /**
+       * @description The Expense Date (YYYY-MM-DD). Defaults to the logging day in the fixed app timezone (Asia/Ho_Chi_Minh) when omitted. Backdating is allowed; this never affects the Converted Amount (ADR-0002).
+       * @example 2026-08-01
+       */
+      expenseDate?: string;
+    };
+    ExpenseDto: {
+      id: string;
+      description: string;
+      /**
+       * @description The Original Amount, exactly as entered, as a fixed-scale decimal string (4 decimal places). Never a JSON number.
+       * @example 45000.0000
+       */
+      originalAmount: string;
+      originalCurrency: components['schemas']['SupportedCurrency'];
+      /**
+       * @description The Converted Amount: the Original Amount converted into the owner's Preferred Currency at the logging date's Daily Rate, and frozen. A fixed-scale decimal string (4 decimal places).
+       * @example 1.9565
+       */
+      convertedAmount: string;
+      convertedCurrency: components['schemas']['SupportedCurrency'];
+      category: components['schemas']['Category'];
+      visibility: components['schemas']['Visibility'];
+      /**
+       * @description YYYY-MM-DD
+       * @example 2026-08-01
+       */
+      expenseDate: string;
+      /** @description ISO 8601 — the immutable Logged At. */
+      loggedAt: string;
     };
   };
   responses: never;
@@ -340,6 +407,48 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  ExpensesController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExpenseDto'][];
+        };
+      };
+    };
+  };
+  ExpensesController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateExpenseDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExpenseDto'];
+        };
       };
     };
   };

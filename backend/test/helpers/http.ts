@@ -40,6 +40,27 @@ export function privateUserBody(response: Response): PrivateUserBody {
   return response.body as PrivateUserBody;
 }
 
+export interface ExpenseBody {
+  id: string;
+  description: string;
+  originalAmount: string;
+  originalCurrency: string;
+  convertedAmount: string;
+  convertedCurrency: string;
+  category: string;
+  visibility: string;
+  expenseDate: string;
+  loggedAt: string;
+}
+
+export function expenseBody(response: Response): ExpenseBody {
+  return response.body as ExpenseBody;
+}
+
+export function expenseListBody(response: Response): ExpenseBody[] {
+  return response.body as ExpenseBody[];
+}
+
 // `expect.any(String)` types as `any` in @types/jest, which trips
 // no-unsafe-assignment wherever it's embedded in an object literal. These
 // check the same invariants without that.

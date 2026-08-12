@@ -191,6 +191,68 @@
         "summary": "Start a token session",
         "tags": ["auth"]
       }
+    },
+    "/expenses": {
+      "post": {
+        "operationId": "ExpensesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExpenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Log an Expense",
+        "tags": ["expenses"]
+      },
+      "get": {
+        "description": "Every Visibility, newest logged first. Owner-only for now.",
+        "operationId": "ExpensesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpenseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's own Expenses",
+        "tags": ["expenses"]
+      }
     }
   },
   "info": {
@@ -404,6 +466,131 @@
           }
         },
         "required": ["email", "password"]
+      },
+      "Category": {
+        "type": "string",
+        "enum": ["housing", "food", "leisure", "investment", "other"]
+      },
+      "Visibility": {
+        "type": "string",
+        "enum": ["private", "friend_only", "public"]
+      },
+      "CreateExpenseDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Coffee with a friend"
+          },
+          "originalAmount": {
+            "type": "string",
+            "example": "45000.0000",
+            "description": "The Original Amount, exactly as entered: a positive decimal string with at most 4 decimal places. Never a JSON number."
+          },
+          "originalCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ]
+          },
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          },
+          "expenseDate": {
+            "type": "string",
+            "example": "2026-08-01",
+            "description": "The Expense Date (YYYY-MM-DD). Defaults to the logging day in the fixed app timezone (Asia/Ho_Chi_Minh) when omitted. Backdating is allowed; this never affects the Converted Amount (ADR-0002)."
+          }
+        },
+        "required": [
+          "description",
+          "originalAmount",
+          "originalCurrency",
+          "category",
+          "visibility"
+        ]
+      },
+      "ExpenseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "originalAmount": {
+            "type": "string",
+            "description": "The Original Amount, exactly as entered, as a fixed-scale decimal string (4 decimal places). Never a JSON number.",
+            "example": "45000.0000"
+          },
+          "originalCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "convertedAmount": {
+            "type": "string",
+            "description": "The Converted Amount: the Original Amount converted into the owner's Preferred Currency at the logging date's Daily Rate, and frozen. A fixed-scale decimal string (4 decimal places).",
+            "example": "1.9565"
+          },
+          "convertedCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ]
+          },
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          },
+          "expenseDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD",
+            "example": "2026-08-01"
+          },
+          "loggedAt": {
+            "type": "string",
+            "description": "ISO 8601 — the immutable Logged At."
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "originalAmount",
+          "originalCurrency",
+          "convertedAmount",
+          "convertedCurrency",
+          "category",
+          "visibility",
+          "expenseDate",
+          "loggedAt"
+        ]
       }
     }
   }
