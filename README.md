@@ -109,4 +109,13 @@ CI regenerates them and fails if the result differs, so mobile types cannot sile
 - **Jest needs `--experimental-vm-modules` for Prisma 7.** Baked into the `test:e2e` script.
 - **Use `ts-node`, not `tsx`, for scripts that boot Nest.** esbuild drops `emitDecoratorMetadata`, and the failure is silent.
 - **`make db-reset` stops for consent when an AI agent is driving.** Prisma refuses destructive commands in an agent session until the human says so explicitly; run it yourself, or pass the consent variable the CLI prints. `make seed` is safe either way — it only inserts rows that are missing.
+- **`make check` cannot catch a broken migration order.** Your databases already have every migration applied, so `prisma migrate deploy` reports nothing pending and never replays them; CI starts from an empty database and does. A migration whose timestamp sorts *before* one it depends on fails there with `42704 type ... does not exist`. Check a new migration against a truly empty database before pushing:
+
+  ```bash
+  podman exec spendx-pg psql -U spendx -d postgres -c 'CREATE DATABASE spendx_freshcheck_test;'
+  DATABASE_URL='postgresql://spendx:spendx@localhost:55432/spendx_freshcheck_test' npx prisma migrate deploy
+  ```
+
+  To repair one already applied locally, rename the directory and relabel the row — `UPDATE _prisma_migrations SET migration_name='<new>' WHERE migration_name='<old>';` on both `spendx` and `spendx_test` — rather than resetting, which would drop your development data. The checksum covers `migration.sql`, not the directory name, so a rename keeps it valid.
+
 - **No backend Dockerfile yet** — deliberate, see [ADR-0006](./docs/adr/0006-containerize-backing-services-only.md).
