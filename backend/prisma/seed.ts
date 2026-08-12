@@ -65,15 +65,15 @@ const users = [
 ];
 
 async function main(): Promise<void> {
-  for (const user of users) {
-    await prisma.user.upsert({
-      where: { id: user.id },
-      create: user,
-      update: user,
-    });
-  }
+  // skipDuplicates rather than upsert: re-seeding leaves existing rows exactly
+  // as they are, instead of bumping every updatedAt on every run. Use
+  // `make db-reset` when you want the dataset rebuilt from scratch.
+  const { count } = await prisma.user.createMany({
+    data: users,
+    skipDuplicates: true,
+  });
 
-  console.log(`Seeded ${users.length} users.`);
+  console.log(`Seeded ${count} of ${users.length} users (the rest existed).`);
 }
 
 main()

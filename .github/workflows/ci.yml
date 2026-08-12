@@ -32,6 +32,9 @@ jobs:
               - 'backend/openapi.json'
               - '.github/workflows/ci.yml'
 
+  # Mirrors the Makefile's lint / typecheck / test targets. It cannot call them
+  # directly: locally those bring Postgres up through compose, here it is a
+  # service container. Keep the two lists in step.
   backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true'

@@ -2,7 +2,7 @@
 
 ## Running and testing this project
 
-`README.md` at the root is the operational guide: `make help` lists every command, `make dev` runs the API, `make mobile` runs the Expo app, `make check` runs exactly what CI runs. Read the "Gotchas" section before debugging tooling — Prisma 7 + CommonJS, npm 11 install-script approvals, and `ts-node` vs `tsx` each have a non-obvious failure mode already recorded there.
+`README.md` at the root is the operational guide: `make help` lists every command, `make dev` runs the API, `make mobile` runs the Expo app, `make check` runs every check CI runs (CI differs only in getting its Postgres from a service container instead of compose). Read the "Gotchas" section before debugging tooling — Prisma 7 + CommonJS, npm 11 install-script approvals, and `ts-node` vs `tsx` each have a non-obvious failure mode already recorded there.
 
 Decisions about the environment itself live in `docs/adr/0005`–`0007`.
 

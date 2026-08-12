@@ -11,7 +11,13 @@ import { buildOpenApiDocument } from '../openapi';
  * which is why CI copies .env.example into place first.
  */
 async function generate(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  // abortOnError would have Nest swallow a bootstrap failure, log it through
+  // the logger disabled on the line above, and exit(1) with no output at all —
+  // leaving a CI failure with nothing to read. Reject instead, and print below.
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+    abortOnError: false,
+  });
   const document = buildOpenApiDocument(app);
   const target = resolve(__dirname, '../../openapi.json');
 

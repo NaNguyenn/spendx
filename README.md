@@ -55,7 +55,7 @@ make seed
 | `make dev`    | Services up, migrations applied, API in watch mode                   |
 | `make mobile` | Expo dev server                                                      |
 | `make test`   | Backend integration suite + mobile unit tests                        |
-| `make check`  | Exactly what CI runs: lint, typecheck, contract drift, all tests     |
+| `make check`  | Every check CI runs: lint, typecheck, contract drift, all tests      |
 | `make seed`   | Load the deterministic development dataset                           |
 | `make db-reset` | Drop, recreate, migrate and reseed the development database        |
 | `make psql`   | A psql shell on the development database                             |
@@ -108,4 +108,5 @@ CI regenerates them and fails if the result differs, so mobile types cannot sile
 - **Prisma 7 is ESM-first, this backend is CommonJS.** The generator is configured with `moduleFormat = "cjs"`; don't drop that without converting the app. The client is generated into `backend/src/generated/prisma` (gitignored, rebuilt by `postinstall`).
 - **Jest needs `--experimental-vm-modules` for Prisma 7.** Baked into the `test:e2e` script.
 - **Use `ts-node`, not `tsx`, for scripts that boot Nest.** esbuild drops `emitDecoratorMetadata`, and the failure is silent.
+- **`make db-reset` stops for consent when an AI agent is driving.** Prisma refuses destructive commands in an agent session until the human says so explicitly; run it yourself, or pass the consent variable the CLI prints. `make seed` is safe either way — it only inserts rows that are missing.
 - **No backend Dockerfile yet** — deliberate, see [ADR-0006](./docs/adr/0006-containerize-backing-services-only.md).

@@ -8,9 +8,9 @@ BACKEND := backend
 MOBILE := mobile
 
 .DEFAULT_GOAL := help
-.PHONY: help setup hooks up down logs psql db-ensure-test migrate seed db-reset \
-        dev mobile openapi api-types contract-check lint typecheck test test-backend \
-        test-mobile check clean
+.PHONY: help setup hooks require-deps env up down logs psql db-ensure-test migrate \
+        seed db-reset dev mobile openapi api-types contract-check lint typecheck \
+        test test-backend test-mobile check clean
 
 help: ## Show this help
 	@grep -hE '^[a-z][a-z-]*:.*?## ' $(MAKEFILE_LIST) \
@@ -22,12 +22,20 @@ setup: hooks ## Install dependencies in both apps and wire git hooks
 	@command -v node >/dev/null || { echo "node not found — install Node $$(cat .nvmrc) (nvm use)"; exit 1; }
 	npm --prefix $(BACKEND) ci
 	npm --prefix $(MOBILE) ci
-	@test -f $(BACKEND)/.env || cp $(BACKEND)/.env.example $(BACKEND)/.env
+	@$(MAKE) --no-print-directory env
 	@echo "Ready. Next: make dev (and make mobile in another terminal)."
 
 hooks: ## Point git at the checked-in hooks in .githooks/
 	git config core.hooksPath .githooks
 	@echo "core.hooksPath = .githooks"
+
+require-deps: ## Fail with a useful message rather than a confusing one
+	@test -d $(BACKEND)/node_modules -a -d $(MOBILE)/node_modules \
+		|| { echo "Dependencies are not installed — run 'make setup' first."; exit 1; }
+
+env: ## Create backend/.env from the example if it is missing
+	@test -f $(BACKEND)/.env || { cp $(BACKEND)/.env.example $(BACKEND)/.env; \
+		echo "Created $(BACKEND)/.env from .env.example"; }
 
 ## --- stack ---------------------------------------------------------------
 
@@ -68,7 +76,7 @@ db-reset: up ## Drop, recreate, migrate and reseed the development database
 
 ## --- running -------------------------------------------------------------
 
-dev: up migrate ## Start services, migrate, then run the API in watch mode
+dev: require-deps env up migrate ## Start services, migrate, then run the API in watch mode
 	npm --prefix $(BACKEND) run start:dev
 
 mobile: ## Start the Expo dev server (own terminal — it needs a TTY)
@@ -108,7 +116,9 @@ test-mobile: ## Run the mobile unit tests
 
 test: test-backend test-mobile ## Run every test
 
-check: lint typecheck contract-check test ## Everything CI runs
+# The same checks .github/workflows/ci.yml runs; keep the two in step. CI
+# differs in one way only: its Postgres is a service container, not compose.
+check: lint typecheck contract-check test ## Every check CI runs
 
 clean: ## Remove containers and the database volume (destroys local data)
 	$(COMPOSE) down -v
