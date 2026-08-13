@@ -117,18 +117,28 @@ export class ExpensesService {
       date: calendarDateInAppTimezone(expense.loggedAt),
     });
 
-    const updated = await this.expensesRepository.update(expenseId, {
-      description: dto.description ?? expense.description,
-      originalAmount,
-      originalCurrency,
-      convertedAmount: converted.amount,
-      convertedCurrency: converted.currency,
-      category: dto.category ?? expense.category,
-      visibility: dto.visibility ?? expense.visibility,
-      expenseDate: dto.expenseDate
-        ? calendarDateToDate(dto.expenseDate)
-        : expense.expenseDate,
-    });
+    // Owner-scoped, like the read above: if the row vanished between the
+    // two queries (a concurrent delete), this is `null` and the same 404 —
+    // never a Prisma error surfacing as a 500.
+    const updated = await this.expensesRepository.updateForOwner(
+      expenseId,
+      ownerId,
+      {
+        description: dto.description ?? expense.description,
+        originalAmount,
+        originalCurrency,
+        convertedAmount: converted.amount,
+        convertedCurrency: converted.currency,
+        category: dto.category ?? expense.category,
+        visibility: dto.visibility ?? expense.visibility,
+        expenseDate: dto.expenseDate
+          ? calendarDateToDate(dto.expenseDate)
+          : expense.expenseDate,
+      },
+    );
+    if (!updated) {
+      throw new NotFoundException('Expense not found');
+    }
 
     return toExpenseDto(updated);
   }
