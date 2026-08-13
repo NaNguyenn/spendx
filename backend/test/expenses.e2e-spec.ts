@@ -480,4 +480,302 @@ describe('expenses', () => {
       expect(expenseListBody(response)).toEqual([]);
     });
   });
+
+  describe('PATCH /expenses/:id', () => {
+    it('rejects a request with no token', async () => {
+      await request(app.getHttpServer())
+        .patch('/expenses/some-id')
+        .send({ description: 'renamed' })
+        .expect(401);
+    });
+
+    it('edits every editable field and returns the updated Expense', async () => {
+      const token = await signUpForToken('VND');
+      clock.set(new Date('2026-08-01T10:00:00.000Z'));
+
+      const { response: created } = await createExpense(app, token, {
+        description: 'Coffee',
+        originalAmount: '45000.0000',
+        originalCurrency: 'VND',
+        category: 'food',
+        visibility: 'private',
+      });
+      const original = expenseBody(created);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/expenses/${original.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          description: 'Dinner out',
+          originalAmount: '120000.0000',
+          category: 'leisure',
+          visibility: 'public',
+          expenseDate: '2026-07-15',
+        });
+
+      expect(response.status).toBe(200);
+      const updated = expenseBody(response);
+      expect(updated).toMatchObject({
+        id: original.id,
+        description: 'Dinner out',
+        originalAmount: '120000.0000',
+        originalCurrency: 'VND',
+        convertedAmount: '120000.0000',
+        convertedCurrency: 'VND',
+        category: 'leisure',
+        visibility: 'public',
+        expenseDate: '2026-07-15',
+      });
+      // Logged At is immutable — an edit never moves the conversion anchor.
+      expect(updated.loggedAt).toBe(original.loggedAt);
+    });
+
+    // ADR-0002 and the issue's core rule: edits re-derive the Converted
+    // Amount at the *original logging date's* Daily Rate, never the edit
+    // date's.
+    it("re-derives the Converted Amount at the original logging date's rate, not the edit date's", async () => {
+      const token = await signUpForToken('USD');
+      clock.set(new Date('2026-08-01T10:00:00.000Z')); // logging day 2026-08-01
+
+      await seedDailyRate(app, rateProvider, {
+        baseCurrency: 'VND',
+        quoteCurrency: 'USD',
+        date: '2026-08-01', // the logging date's rate — must win
+        rate: '0.0000400000',
+      });
+      await seedDailyRate(app, rateProvider, {
+        baseCurrency: 'VND',
+        quoteCurrency: 'USD',
+        date: '2026-08-05', // the edit date's rate — must lose
+        rate: '0.0000800000',
+      });
+
+      const { response: created } = await createExpense(app, token, {
+        originalAmount: '1000000.0000',
+        originalCurrency: 'VND',
+      });
+      const original = expenseBody(created);
+      expect(original.convertedAmount).toBe('40.0000');
+
+      clock.set(new Date('2026-08-05T10:00:00.000Z')); // editing four days later
+
+      const response = await request(app.getHttpServer())
+        .patch(`/expenses/${original.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ originalAmount: '2000000.0000' });
+
+      expect(response.status).toBe(200);
+      // 160.0000 would mean the edit date's rate was used.
+      expect(expenseBody(response).convertedAmount).toBe('80.0000');
+    });
+
+    it("re-derives at the logging date's rate when the currency changes", async () => {
+      const token = await signUpForToken('USD');
+      clock.set(new Date('2026-08-01T10:00:00.000Z'));
+
+      await seedDailyRate(app, rateProvider, {
+        baseCurrency: 'EUR',
+        quoteCurrency: 'USD',
+        date: '2026-08-01',
+        rate: '1.1000000000',
+      });
+
+      const { response: created } = await createExpense(app, token, {
+        originalAmount: '100.0000',
+        originalCurrency: 'USD', // same-currency at first: no rate involved
+      });
+      const original = expenseBody(created);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/expenses/${original.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ originalCurrency: 'EUR' });
+
+      expect(response.status).toBe(200);
+      const updated = expenseBody(response);
+      expect(updated.originalCurrency).toBe('EUR');
+      expect(updated.convertedAmount).toBe('110.0000'); // 100 EUR * 1.1
+      expect(updated.convertedCurrency).toBe('USD');
+    });
+
+    it('moves the Expense Date without changing the Converted Amount', async () => {
+      const token = await signUpForToken('USD');
+      clock.set(new Date('2026-08-01T10:00:00.000Z'));
+
+      await seedDailyRate(app, rateProvider, {
+        baseCurrency: 'VND',
+        quoteCurrency: 'USD',
+        date: '2026-08-01',
+        rate: '0.0000400000',
+      });
+
+      const { response: created } = await createExpense(app, token, {
+        originalAmount: '1000000.0000',
+        originalCurrency: 'VND',
+      });
+      const original = expenseBody(created);
+      expect(original.expenseDate).toBe('2026-08-01');
+
+      // A rate on the new Expense Date that must NOT be consulted.
+      await seedDailyRate(app, rateProvider, {
+        baseCurrency: 'VND',
+        quoteCurrency: 'USD',
+        date: '2026-07-01',
+        rate: '0.0000900000',
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/expenses/${original.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ expenseDate: '2026-07-01' });
+
+      expect(response.status).toBe(200);
+      const updated = expenseBody(response);
+      expect(updated.expenseDate).toBe('2026-07-01');
+      expect(updated.convertedAmount).toBe(original.convertedAmount);
+    });
+
+    it("returns 404 for another User's Expense and leaves it untouched", async () => {
+      const ownerToken = await signUpForToken('VND');
+      const strangerToken = await signUpForToken('VND');
+
+      const { response: created } = await createExpense(app, ownerToken, {
+        description: 'mine',
+        originalCurrency: 'VND',
+      });
+      const original = expenseBody(created);
+
+      await request(app.getHttpServer())
+        .patch(`/expenses/${original.id}`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ description: 'hijacked' })
+        .expect(404);
+
+      const list = await request(app.getHttpServer())
+        .get('/expenses')
+        .set('Authorization', `Bearer ${ownerToken}`);
+      expect(expenseListBody(list)[0]?.description).toBe('mine');
+    });
+
+    it('returns 404 for an Expense that does not exist', async () => {
+      const token = await signUpForToken();
+      await request(app.getHttpServer())
+        .patch('/expenses/00000000-0000-7000-8000-000000000000')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ description: 'ghost' })
+        .expect(404);
+    });
+
+    it('rejects the same malformed values create rejects', async () => {
+      const token = await signUpForToken('VND');
+      const { response: created } = await createExpense(app, token, {
+        originalCurrency: 'VND',
+      });
+      const { id } = expenseBody(created);
+
+      for (const [body, field] of [
+        [{ originalAmount: '-5.00' }, /originalAmount/i],
+        [{ category: 'crypto' }, /category/i],
+        [{ visibility: 'friends-only' }, /visibility/i],
+        [{ expenseDate: '2026-13-40' }, /expenseDate/i],
+        [{ description: '' }, /description/i],
+      ] as const) {
+        const response = await request(app.getHttpServer())
+          .patch(`/expenses/${id}`)
+          .set('Authorization', `Bearer ${token}`)
+          .send(body);
+        expect(response.status).toBe(400);
+        expect(errorMessage(response)).toMatch(field);
+      }
+    });
+
+    it('accepts an empty body as a no-op edit', async () => {
+      const token = await signUpForToken('VND');
+      const { response: created } = await createExpense(app, token, {
+        originalCurrency: 'VND',
+      });
+      const original = expenseBody(created);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/expenses/${original.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+
+      expect(response.status).toBe(200);
+      expect(expenseBody(response)).toEqual(original);
+    });
+  });
+
+  describe('DELETE /expenses/:id', () => {
+    it('rejects a request with no token', async () => {
+      await request(app.getHttpServer())
+        .delete('/expenses/some-id')
+        .expect(401);
+    });
+
+    it('deletes an Expense so it is gone from the list, leaving others alone', async () => {
+      const token = await signUpForToken('VND');
+
+      const { response: first } = await createExpense(app, token, {
+        description: 'keep me',
+        originalCurrency: 'VND',
+      });
+      const { response: second } = await createExpense(app, token, {
+        description: 'delete me',
+        originalCurrency: 'VND',
+      });
+      const doomed = expenseBody(second);
+
+      const response = await request(app.getHttpServer())
+        .delete(`/expenses/${doomed.id}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(response.status).toBe(204);
+      expect(response.body).toEqual({});
+
+      const list = await request(app.getHttpServer())
+        .get('/expenses')
+        .set('Authorization', `Bearer ${token}`);
+      const remaining = expenseListBody(list);
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]?.id).toBe(expenseBody(first).id);
+    });
+
+    it("returns 404 for another User's Expense and leaves it in place", async () => {
+      const ownerToken = await signUpForToken('VND');
+      const strangerToken = await signUpForToken('VND');
+
+      const { response: created } = await createExpense(app, ownerToken, {
+        originalCurrency: 'VND',
+      });
+      const { id } = expenseBody(created);
+
+      await request(app.getHttpServer())
+        .delete(`/expenses/${id}`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .expect(404);
+
+      const list = await request(app.getHttpServer())
+        .get('/expenses')
+        .set('Authorization', `Bearer ${ownerToken}`);
+      expect(expenseListBody(list)).toHaveLength(1);
+    });
+
+    it('returns 404 for an Expense that does not exist, including one already deleted', async () => {
+      const token = await signUpForToken('VND');
+      const { response: created } = await createExpense(app, token, {
+        originalCurrency: 'VND',
+      });
+      const { id } = expenseBody(created);
+
+      await request(app.getHttpServer())
+        .delete(`/expenses/${id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .delete(`/expenses/${id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+    });
+  });
 });

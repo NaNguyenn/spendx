@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ const keyExtractor = (expense: ExpenseDto) => expense.id;
 export default function ExpensesScreen() {
   const { user, token } = useSession();
   const theme = useTheme();
+  const router = useRouter();
   const { t } = useTranslation();
 
   const [state, setState] = useState<LoadState>({ status: 'loading' });
@@ -68,6 +69,27 @@ export default function ExpensesScreen() {
       // and cheaper than plumbing an AbortController through for a
       // personal, small-N list.
     }, [load]),
+  );
+
+  // One stable callback for every row (see ExpenseRow's `onPress` doc
+  // comment). The row's fields ride along as params — the edit sheet
+  // prefills from them instead of refetching (app/edit-expense/[id].tsx).
+  const openEditSheet = useCallback(
+    (expense: ExpenseDto) => {
+      router.push({
+        pathname: '/edit-expense/[id]',
+        params: {
+          id: expense.id,
+          description: expense.description,
+          originalAmount: expense.originalAmount,
+          originalCurrency: expense.originalCurrency,
+          category: expense.category,
+          visibility: expense.visibility,
+          expenseDate: expense.expenseDate,
+        },
+      });
+    },
+    [router],
   );
 
   if (!user) return null;
@@ -106,7 +128,9 @@ export default function ExpensesScreen() {
           <FlatList
             data={state.expenses}
             keyExtractor={keyExtractor}
-            renderItem={({ item }) => <ExpenseRow expense={item} now={now} />}
+            renderItem={({ item }) => (
+              <ExpenseRow expense={item} now={now} onPress={openEditSheet} />
+            )}
             ItemSeparatorComponent={() => (
               <View
                 style={[styles.separator, { backgroundColor: theme.border }]}

@@ -253,6 +253,83 @@
         "summary": "The caller's own Expenses",
         "tags": ["expenses"]
       }
+    },
+    "/expenses/{id}": {
+      "patch": {
+        "description": "Owner-only. The Converted Amount is re-derived at the original logging date's Daily Rate, never the edit date's (ADR-0002).",
+        "operationId": "ExpensesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExpenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not the caller's Expense, or no such Expense."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit an Expense",
+        "tags": ["expenses"]
+      },
+      "delete": {
+        "description": "Owner-only. Removes it everywhere, with no residue.",
+        "operationId": "ExpensesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "404": {
+            "description": "Not the caller's Expense, or no such Expense."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete an Expense",
+        "tags": ["expenses"]
+      }
     }
   },
   "info": {
@@ -591,6 +668,46 @@
           "expenseDate",
           "loggedAt"
         ]
+      },
+      "UpdateExpenseDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Coffee with a friend"
+          },
+          "originalAmount": {
+            "type": "string",
+            "example": "45000.0000",
+            "description": "The Original Amount, exactly as entered: a positive decimal string with at most 4 decimal places. Never a JSON number."
+          },
+          "originalCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ]
+          },
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          },
+          "expenseDate": {
+            "type": "string",
+            "example": "2026-08-01",
+            "description": "The Expense Date (YYYY-MM-DD). Defaults to the logging day in the fixed app timezone (Asia/Ho_Chi_Minh) when omitted. Backdating is allowed; this never affects the Converted Amount (ADR-0002)."
+          }
+        }
       }
     }
   }

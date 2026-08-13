@@ -15,6 +15,7 @@ export const en = {
   // drawn, but read aloud, so it is a shell string like any other.
   'common.close': 'Close',
   'common.done': 'Done',
+  'common.cancel': 'Cancel',
 
   'tab.expenses': 'Expenses',
   'tab.leaderboard': 'Leaderboard',
@@ -67,6 +68,14 @@ export const en = {
   'expenseForm.visibilityLabel': 'Visibility',
   'expenseForm.dateLabel': 'Expense date',
   'expenseForm.submit': 'Save expense',
+
+  'expenseForm.editTitle': 'Edit expense',
+  'expenseForm.saveChanges': 'Save changes',
+  'expenseForm.delete': 'Delete expense',
+  'expenseForm.deleteConfirmTitle': 'Delete this expense?',
+  'expenseForm.deleteConfirmMessage':
+    'It disappears from every list and total. This can’t be undone.',
+  'expenseForm.deleteConfirm': 'Delete',
 
   'profile.preferences': 'Preferences',
   'profile.account': 'Account',

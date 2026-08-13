@@ -120,6 +120,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/expenses/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete an Expense
+     * @description Owner-only. Removes it everywhere, with no residue.
+     */
+    delete: operations['ExpensesController_remove'];
+    options?: never;
+    head?: never;
+    /**
+     * Edit an Expense
+     * @description Owner-only. The Converted Amount is re-derived at the original logging date's Daily Rate, never the edit date's (ADR-0002).
+     */
+    patch: operations['ExpensesController_update'];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -250,6 +274,23 @@ export interface components {
       expenseDate: string;
       /** @description ISO 8601 — the immutable Logged At. */
       loggedAt: string;
+    };
+    UpdateExpenseDto: {
+      /** @example Coffee with a friend */
+      description?: string;
+      /**
+       * @description The Original Amount, exactly as entered: a positive decimal string with at most 4 decimal places. Never a JSON number.
+       * @example 45000.0000
+       */
+      originalAmount?: string;
+      originalCurrency?: components['schemas']['SupportedCurrency'];
+      category?: components['schemas']['Category'];
+      visibility?: components['schemas']['Visibility'];
+      /**
+       * @description The Expense Date (YYYY-MM-DD). Defaults to the logging day in the fixed app timezone (Asia/Ho_Chi_Minh) when omitted. Backdating is allowed; this never affects the Converted Amount (ADR-0002).
+       * @example 2026-08-01
+       */
+      expenseDate?: string;
     };
   };
   responses: never;
@@ -449,6 +490,65 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ExpenseDto'];
         };
+      };
+    };
+  };
+  ExpensesController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not the caller's Expense, or no such Expense. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ExpensesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateExpenseDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExpenseDto'];
+        };
+      };
+      /** @description Not the caller's Expense, or no such Expense. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

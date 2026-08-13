@@ -1,4 +1,8 @@
-import { formatExpenseAmount, parseAmountInput } from './amount-input';
+import {
+  amountInputFromDecimal,
+  formatExpenseAmount,
+  parseAmountInput,
+} from './amount-input';
 
 describe('parseAmountInput', () => {
   it('parses a plain en amount using a dot decimal separator', () => {
@@ -77,6 +81,42 @@ describe('parseAmountInput', () => {
 
   it('rejects a negative amount', () => {
     expect(parseAmountInput('-48.65', 'en')).toBeNull();
+  });
+});
+
+describe('amountInputFromDecimal', () => {
+  it('drops an all-zero fraction entirely', () => {
+    expect(amountInputFromDecimal('45000.0000', 'en')).toBe('45000');
+  });
+
+  it('trims trailing fraction zeros but keeps significant ones', () => {
+    expect(amountInputFromDecimal('48.6500', 'en')).toBe('48.65');
+  });
+
+  it('uses the vi comma as the decimal separator', () => {
+    expect(amountInputFromDecimal('48.6500', 'vi')).toBe('48,65');
+  });
+
+  it('keeps a sub-one amount intact', () => {
+    expect(amountInputFromDecimal('0.5000', 'en')).toBe('0.5');
+  });
+
+  it('never adds grouping separators', () => {
+    expect(amountInputFromDecimal('1250000.0000', 'vi')).toBe('1250000');
+  });
+
+  it('round-trips a 16-integer-digit amount exactly, no float on the way', () => {
+    expect(amountInputFromDecimal('9999999999999999.9999', 'en')).toBe(
+      '9999999999999999.9999',
+    );
+  });
+
+  it('round-trips through parseAmountInput in both locales', () => {
+    for (const locale of ['en', 'vi'] as const) {
+      expect(
+        parseAmountInput(amountInputFromDecimal('120000.5000', locale), locale),
+      ).toBe('120000.5');
+    }
   });
 });
 

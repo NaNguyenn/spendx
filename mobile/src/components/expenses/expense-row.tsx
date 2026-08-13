@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { VisibilityBadge } from '@/components/expenses/visibility-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -22,6 +22,12 @@ interface ExpenseRowProps {
    * (see the vercel-react-native-skills list-performance-inline-objects rule).
    */
   now: Date;
+  /**
+   * Tap → the edit sheet (ticket #6). Takes the expense so the parent can
+   * pass one stable callback for every row instead of a fresh closure per
+   * row per render — the same memo-preserving rule as `now` above.
+   */
+  onPress: (expense: ExpenseDto) => void;
 }
 
 /**
@@ -36,6 +42,7 @@ interface ExpenseRowProps {
 export const ExpenseRow = memo(function ExpenseRow({
   expense,
   now,
+  onPress,
 }: ExpenseRowProps) {
   const theme = useTheme();
   const { locale } = useTranslation();
@@ -48,7 +55,11 @@ export const ExpenseRow = memo(function ExpenseRow({
   const showOriginal = expense.originalCurrency !== expense.convertedCurrency;
 
   return (
-    <View style={styles.row}>
+    <Pressable
+      onPress={() => onPress(expense)}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
       <View
         style={[styles.tile, { backgroundColor: theme[categoryMeta.soft] }]}
       >
@@ -89,7 +100,7 @@ export const ExpenseRow = memo(function ExpenseRow({
           </ThemedText>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 });
 
@@ -100,6 +111,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sp3,
     paddingVertical: 12,
     paddingHorizontal: 14,
+  },
+  pressed: {
+    opacity: 0.6,
   },
   tile: {
     width: 42,

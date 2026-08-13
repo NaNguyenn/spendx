@@ -89,6 +89,25 @@ export function parseAmountInput(
 }
 
 /**
+ * The inverse of `parseAmountInput` for prefilling an editable field: turns
+ * an `ExpenseDto` amount — a fixed-scale decimal string, `"45000.0000"` —
+ * into what the user would have typed in `locale`. Trailing fraction zeros
+ * go (the fixed scale is the column's, not the user's), the decimal mark is
+ * the locale's, and no grouping separators are added — pure string surgery,
+ * so even a 16-integer-digit amount survives exactly (no `Number` on the
+ * way, unlike `formatExpenseAmount` below).
+ */
+export function amountInputFromDecimal(
+  decimalAmount: string,
+  locale: SupportedLocale,
+): string {
+  const [integerPart, fractionPart = ''] = decimalAmount.split('.');
+  const fraction = fractionPart.replace(/0+$/, '');
+  if (fraction === '') return integerPart ?? decimalAmount;
+  return `${integerPart}${AMOUNT_SEPARATORS[locale].decimal}${fraction}`;
+}
+
+/**
  * Renders an `ExpenseDto` amount — a fixed-scale decimal *string*, e.g.
  * `"45000.0000"` — for display, bridging it to `format.ts`'s `formatAmount`
  * (which takes a `number`).

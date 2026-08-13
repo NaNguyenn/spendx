@@ -1,5 +1,7 @@
 import {
+  apiDelete,
   apiGet,
+  apiPatch,
   apiPost,
   type JsonRequestBody,
   type OkJson,
@@ -7,15 +9,18 @@ import {
 import type { paths } from '@/api/schema';
 
 /**
- * Thin wrappers around `POST /expenses` and `GET /expenses` — the same shape
- * as the calls already inlined in auth/session-context.tsx, pulled out here
- * because Expenses isn't part of the session's own auth flow and two
- * screens (the list, the create form) both need them. Types are derived
- * from the generated `paths` (ADR-0007), not hand-copied.
+ * Thin wrappers around the `/expenses` endpoints — the same shape as the
+ * calls already inlined in auth/session-context.tsx, pulled out here
+ * because Expenses isn't part of the session's own auth flow and several
+ * screens (the list, the create form, the edit sheet) need them. Types are
+ * derived from the generated `paths` (ADR-0007), not hand-copied.
  */
 
 export type ExpenseDto = OkJson<paths['/expenses']['get']>[number];
 export type CreateExpenseInput = JsonRequestBody<paths['/expenses']['post']>;
+export type UpdateExpenseInput = JsonRequestBody<
+  paths['/expenses/{id}']['patch']
+>;
 
 /** The caller's own Expenses, every Visibility, newest logged first. */
 export function fetchExpenses(token: string): Promise<ExpenseDto[]> {
@@ -28,4 +33,21 @@ export function createExpense(
   input: CreateExpenseInput,
 ): Promise<ExpenseDto> {
   return apiPost('/expenses', input, { token });
+}
+
+/**
+ * Edits an owner's Expense; the server re-derives the Converted Amount at
+ * the original logging date's Daily Rate (never the edit date's).
+ */
+export function updateExpense(
+  token: string,
+  id: string,
+  input: UpdateExpenseInput,
+): Promise<ExpenseDto> {
+  return apiPatch('/expenses/{id}', input, { token, params: { id } });
+}
+
+/** Deletes an owner's Expense outright. */
+export function deleteExpense(token: string, id: string): Promise<void> {
+  return apiDelete('/expenses/{id}', { token, params: { id } });
 }

@@ -21,3 +21,14 @@ export function calendarDateString(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * The inverse, for prefilling the picker from an `ExpenseDto`'s
+ * `expenseDate`: `YYYY-MM-DD` as *local* midnight. `new Date('2026-08-01')`
+ * would parse as UTC midnight — the previous local day anywhere west of UTC
+ * — so the components are picked apart and fed to the local constructor.
+ */
+export function dateFromCalendarString(calendarDate: string): Date {
+  const [year = 0, month = 1, day = 1] = calendarDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}

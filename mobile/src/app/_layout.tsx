@@ -71,6 +71,16 @@ function RootNavigator() {
             sheetGrabberVisible: false,
           }}
         />
+        {/* Editing an Expense row (ticket #6): the same sheet anatomy as
+            log-expense, prefilled — see app/edit-expense/[id].tsx. */}
+        <Stack.Screen
+          name="edit-expense/[id]"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: 'fitToContents',
+            sheetGrabberVisible: false,
+          }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

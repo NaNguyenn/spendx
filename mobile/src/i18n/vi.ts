@@ -11,6 +11,7 @@ import type { TranslationKey } from '@/i18n/en';
 export const vi: Record<TranslationKey, string> = {
   'common.close': 'Đóng',
   'common.done': 'Xong',
+  'common.cancel': 'Hủy',
 
   'tab.expenses': 'Chi tiêu',
   'tab.leaderboard': 'Xếp hạng',
@@ -55,6 +56,14 @@ export const vi: Record<TranslationKey, string> = {
   'expenseForm.visibilityLabel': 'Chế độ hiển thị',
   'expenseForm.dateLabel': 'Ngày chi tiêu',
   'expenseForm.submit': 'Lưu khoản chi',
+
+  'expenseForm.editTitle': 'Sửa khoản chi',
+  'expenseForm.saveChanges': 'Lưu thay đổi',
+  'expenseForm.delete': 'Xóa khoản chi',
+  'expenseForm.deleteConfirmTitle': 'Xóa khoản chi này?',
+  'expenseForm.deleteConfirmMessage':
+    'Khoản chi sẽ biến mất khỏi mọi danh sách và tổng. Không thể hoàn tác.',
+  'expenseForm.deleteConfirm': 'Xóa',
 
   'profile.preferences': 'Tùy chọn',
   'profile.account': 'Tài khoản',

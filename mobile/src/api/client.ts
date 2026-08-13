@@ -31,6 +31,10 @@ type PathsWithPatch = {
   [P in keyof paths]: paths[P] extends { patch: object } ? P : never;
 }[keyof paths];
 
+type PathsWithDelete = {
+  [P in keyof paths]: paths[P] extends { delete: object } ? P : never;
+}[keyof paths];
+
 // Success is 200 for GETs, 201 for the POSTs that create something (sign-up) —
 // checked as a union so both kinds of endpoint share one helper. Exported so
 // callers can name a route's response/request shape without hand-declaring a
@@ -52,6 +56,13 @@ export type JsonRequestBody<T> = T extends {
 export interface RequestOptions {
   /** Bearer token for authenticated endpoints. */
   token?: string;
+  /**
+   * Values for the path's `{placeholder}` segments (`/expenses/{id}` +
+   * `{ id }`), substituted URL-encoded. The typed path stays the literal
+   * schema key so it keeps matching `paths` — substitution is a runtime
+   * concern only.
+   */
+  params?: Record<string, string>;
   signal?: AbortSignal;
 }
 
@@ -86,12 +97,27 @@ export async function apiPatch<P extends PathsWithPatch>(
   );
 }
 
+export async function apiDelete<P extends PathsWithDelete>(
+  path: P,
+  options: RequestOptions = {},
+): Promise<void> {
+  await request(path as string, { method: 'DELETE' }, options);
+}
+
 async function request<T>(
   path: string,
   init: RequestInit,
-  { token, signal }: RequestOptions,
+  { token, params, signal }: RequestOptions,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const url = params
+    ? Object.entries(params).reduce(
+        (acc, [key, value]) =>
+          acc.replace(`{${key}}`, encodeURIComponent(value)),
+        path,
+      )
+    : path;
+
+  const response = await fetch(`${API_BASE_URL}${url}`, {
     ...init,
     signal,
     headers: {
