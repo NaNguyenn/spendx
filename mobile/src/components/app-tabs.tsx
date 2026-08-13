@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import {
   TabList,
   TabSlot,
@@ -157,19 +158,15 @@ function TabButton({
   );
 }
 
-/**
- * Placeholder action — mobile ticket #5 ("Expense logging UI: Log Button
- * form and Expenses tab list") wires this to the Log Expense sheet. Until
- * then it's a real, focusable, accessible control with the design's visual
- * treatment that intentionally does nothing.
- */
+/** Opens the Log Expense sheet — app/log-expense.tsx, a root-stack route (see its own header comment on why it isn't inside `(app)/`). */
 function LogButton() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const router = useRouter();
 
   return (
     <Pressable
-      onPress={() => {}}
+      onPress={() => router.push('/log-expense')}
       accessibilityRole="button"
       accessibilityLabel={t('logButton.accessibilityLabel')}
       style={({ pressed }) => [

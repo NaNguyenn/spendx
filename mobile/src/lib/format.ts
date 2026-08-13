@@ -133,6 +133,24 @@ export function formatCompactAmount(
   }).format(amount);
 }
 
+/**
+ * The bare currency symbol — "$" (USD/en), "₫" (VND, either locale) — for
+ * compact chips like the Currency Pill (design component `gkLbq`) where a
+ * full formatted amount doesn't fit. Reuses the same cached formatter as
+ * `formatAmount` via `formatToParts`, so this never duplicates ICU's own
+ * idea of which symbol a currency/locale pair uses.
+ */
+export function currencySymbol(
+  currency: SupportedCurrency,
+  locale: SupportedLocale,
+): string {
+  const parts = getNumberFormatter(locale, {
+    style: 'currency',
+    currency,
+  }).formatToParts(0);
+  return parts.find((part) => part.type === 'currency')?.value ?? currency;
+}
+
 /** A 0–1 fraction as a whole-number percent — `formatPercent(0.12, 'en')` → "12%". */
 export function formatPercent(
   fraction: number,
@@ -174,6 +192,30 @@ export function formatDateTime(
     ? TODAY_LABEL[locale]
     : formatShortDate(date, locale);
   return `${day} · ${getTimeFormatter(locale).format(date)}`;
+}
+
+/** Day, month and year — "11 Aug 2026" (en) vs "11 thg 8 2026" (vi). */
+export function formatFullDate(date: Date, locale: SupportedLocale): string {
+  return `${formatShortDate(date, locale)} ${date.getFullYear()}`;
+}
+
+/**
+ * The Expense Date field's display value: "Today · 11 Aug 2026" while the
+ * date is still today (the create form's default), else the plain
+ * "9 Aug 2026" once the user has picked a different day — no "Today · "
+ * prefix reappears just because that other day happens to be today by the
+ * time it's rendered again, since `date` and `now` are compared as given.
+ * Same `now`-as-argument shape as `formatDateTime`, for the same reason.
+ */
+export function formatExpenseDateLabel(
+  date: Date,
+  locale: SupportedLocale,
+  now: Date,
+): string {
+  const full = formatFullDate(date, locale);
+  return isSameCalendarDay(date, now)
+    ? `${TODAY_LABEL[locale]} · ${full}`
+    : full;
 }
 
 /**

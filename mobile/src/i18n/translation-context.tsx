@@ -20,11 +20,14 @@ interface TranslationContextValue {
   /** The account Locale when signed in, else the resolved device language. */
   locale: SupportedLocale;
   /**
-   * No interpolation: not one string in either catalogue has a placeholder.
-   * The ticket that needs one adds the parameter then — an unused `params`
-   * argument here would just be machinery with nothing to configure.
+   * `params` fills in `{name}` placeholders in the catalogue string — e.g.
+   * `visibility.public.helper`'s "…with your @{username}." (mobile ticket
+   * #5 is the first string that needs one; every earlier key has none, so
+   * omitting `params` is still the common case). Unmatched placeholders are
+   * left as-is rather than throwing — a missing param is a bug worth seeing
+   * on screen, not one that should crash the form.
    */
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: Record<string, string>) => string;
 }
 
 const TranslationContext = createContext<TranslationContextValue | null>(null);
@@ -51,7 +54,15 @@ export function TranslationProvider({ children }: PropsWithChildren) {
   const value = useMemo<TranslationContextValue>(
     () => ({
       locale,
-      t: (key) => CATALOGUES[locale][key],
+      t: (key, params) => {
+        const template = CATALOGUES[locale][key];
+        if (!params) return template;
+        return template.replace(/{(\w+)}/g, (match, name: string) =>
+          Object.prototype.hasOwnProperty.call(params, name)
+            ? params[name]
+            : match,
+        );
+      },
     }),
     [locale],
   );

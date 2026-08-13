@@ -44,6 +44,33 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(app)" />
+        {/*
+          The Log Button's destination (components/app-tabs.tsx's
+          `LogButton`, mobile ticket #5) lives here rather than inside
+          `(app)/` — that group's own layout is the `expo-router/ui` tab
+          bar, where every route under it becomes a tab slot instead of a
+          screen that can be pushed and popped.
+
+          `formSheet` over a plain `modal`: react-native-screens 4.0+
+          (this app is on 4.26, see package.json) supports it natively on
+          both platforms, and the one documented Android caveat — nested
+          stack navigators inside a form sheet misbehaving — doesn't apply
+          here, since log-expense.tsx pushes nothing of its own.
+          `fitToContents` sizes the sheet to the form's actual height
+          instead of a fixed detent fraction, closest to the mock's sheet
+          (which doesn't span the full screen). `sheetGrabberVisible` is
+          iOS-only (see the expo-router skill's form-sheet reference), so
+          the screen draws its own grabber bar for both platforms rather
+          than relying on it.
+        */}
+        <Stack.Screen
+          name="log-expense"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: 'fitToContents',
+            sheetGrabberVisible: false,
+          }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

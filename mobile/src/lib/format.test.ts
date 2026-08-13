@@ -1,7 +1,10 @@
 import {
+  currencySymbol,
   formatAmount,
   formatCompactAmount,
   formatDateTime,
+  formatExpenseDateLabel,
+  formatFullDate,
   formatNumber,
   formatPercent,
   formatPeriodRange,
@@ -70,6 +73,17 @@ describe('formatCompactAmount', () => {
   });
 });
 
+describe('currencySymbol', () => {
+  it('returns the dollar sign for USD in en', () => {
+    expect(currencySymbol('USD', 'en')).toBe('$');
+  });
+
+  it('returns the đồng sign for VND in both locales', () => {
+    expect(currencySymbol('VND', 'en')).toBe('₫');
+    expect(currencySymbol('VND', 'vi')).toBe('₫');
+  });
+});
+
 describe('formatPercent', () => {
   it('renders a fraction as a whole-number percent in en', () => {
     expect(normalizeSpaces(formatPercent(0.12, 'en'))).toBe('12%');
@@ -125,6 +139,42 @@ describe('formatDateTime', () => {
     // 20:20 "now" but 23:59 the night before — 20h ago, still a different day.
     const loggedAt = new Date(2026, 7, 8, 23, 59, 0);
     expect(formatDateTime(loggedAt, 'en', now)).toBe('8 Aug · 23:59');
+  });
+});
+
+describe('formatFullDate', () => {
+  it('renders day, month and year in en, per the mock ("11 Aug 2026")', () => {
+    expect(formatFullDate(new Date(2026, 7, 11), 'en')).toBe('11 Aug 2026');
+  });
+
+  it('renders the Vietnamese abbreviation with year', () => {
+    expect(formatFullDate(new Date(2026, 7, 11), 'vi')).toBe('11 thg 8 2026');
+  });
+});
+
+describe('formatExpenseDateLabel', () => {
+  const now = new Date(2026, 7, 11, 9, 0, 0);
+
+  it('prefixes "Today" for the current calendar day in en, per the mock', () => {
+    expect(formatExpenseDateLabel(now, 'en', now)).toBe('Today · 11 Aug 2026');
+  });
+
+  it('prefixes "Hôm nay" for the current calendar day in vi', () => {
+    expect(formatExpenseDateLabel(now, 'vi', now)).toBe(
+      'Hôm nay · 11 thg 8 2026',
+    );
+  });
+
+  it('renders a plain date, no prefix, for a backdated day', () => {
+    const backdated = new Date(2026, 7, 5, 9, 0, 0);
+    expect(formatExpenseDateLabel(backdated, 'en', now)).toBe('5 Aug 2026');
+  });
+
+  it('treats "today" as a calendar date, not a rolling 24 hours', () => {
+    const lateLastNight = new Date(2026, 7, 10, 23, 59, 0);
+    expect(formatExpenseDateLabel(lateLastNight, 'en', now)).toBe(
+      '10 Aug 2026',
+    );
   });
 });
 

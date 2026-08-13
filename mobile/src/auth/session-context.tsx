@@ -35,6 +35,15 @@ export type CurrentUser = OkJson<paths['/users/me']['get']>;
 
 interface SessionContextValue {
   user: CurrentUser | null;
+  /**
+   * The bearer token for every authenticated endpoint this context doesn't
+   * already wrap itself (`/expenses`, and whatever comes after it) — `null`
+   * until sign-in resolves. Kept as a passthrough rather than growing this
+   * context with an `apiPost`-for-expenses-shaped method per feature, since
+   * that would make session-context.tsx a dependency of every future
+   * authenticated screen instead of just the one that owns the session.
+   */
+  token: string | null;
   /** True until the persisted token has been read and, if present, verified. */
   isLoading: boolean;
   signUp(input: SignUpInput): Promise<void>;
@@ -99,6 +108,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const value = useMemo<SessionContextValue>(
     () => ({
       user,
+      token,
       isLoading: isTokenLoading || isResolvingUser,
       async signUp(input) {
         const result = await apiPost('/auth/sign-up', input);

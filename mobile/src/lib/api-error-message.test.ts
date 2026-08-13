@@ -30,6 +30,34 @@ describe('getErrorMessage', () => {
     });
   });
 
+  it('reports the rate-unavailable key for a 503, ahead of the generic body handling', () => {
+    const error = new ApiError(503, {
+      statusCode: 503,
+      message: 'No Daily Rate available for USD -> VND on or before 2026-08-01',
+    });
+
+    expect(getErrorMessage(error)).toEqual({
+      kind: 'key',
+      key: 'apiError.rateUnavailable',
+    });
+  });
+
+  it('relays an unrelated 503 rather than blaming the currency', () => {
+    // A restarting or unhealthy server also answers 503. Mapping that to
+    // "no exchange rate for that currency" would send the user to change a
+    // currency that was never the problem, so only ConversionService's own
+    // message earns that key.
+    const error = new ApiError(503, {
+      statusCode: 503,
+      message: 'Service Unavailable',
+    });
+
+    expect(getErrorMessage(error)).toEqual({
+      kind: 'server',
+      text: 'Service Unavailable',
+    });
+  });
+
   it('falls back to the generic key when the body has no message', () => {
     const error = new ApiError(500, { statusCode: 500 });
 

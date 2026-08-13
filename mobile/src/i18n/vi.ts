@@ -10,6 +10,7 @@ import type { TranslationKey } from '@/i18n/en';
  */
 export const vi: Record<TranslationKey, string> = {
   'common.close': 'Đóng',
+  'common.done': 'Xong',
 
   'tab.expenses': 'Chi tiêu',
   'tab.leaderboard': 'Xếp hạng',
@@ -18,9 +19,42 @@ export const vi: Record<TranslationKey, string> = {
 
   'logButton.accessibilityLabel': 'Ghi chi tiêu',
 
-  'expenses.comingSoon': 'Nhật ký chi tiêu của bạn sắp ra mắt.',
+  'expenses.subtitle': 'Nhật ký của bạn · mọi chế độ hiển thị',
+  'expenses.recent': 'Gần đây',
+  'expenses.empty.title': 'Chưa có khoản chi nào',
+  'expenses.empty.note':
+    'Nhấn nút ghi chi tiêu bên dưới để thêm khoản đầu tiên.',
+  'expenses.retry': 'Thử lại',
   'leaderboard.comingSoon': 'Bảng xếp hạng bạn bè sắp ra mắt.',
   'feed.comingSoon': 'Bảng tin công khai sắp ra mắt.',
+
+  'category.housing': 'Nhà ở',
+  'category.food': 'Ăn uống',
+  'category.leisure': 'Giải trí',
+  'category.investment': 'Đầu tư',
+  'category.other': 'Khác',
+
+  'visibility.private': 'Riêng tư',
+  'visibility.friendOnly': 'Chỉ bạn bè',
+  'visibility.public': 'Công khai',
+  'visibility.private.helper':
+    'Chỉ mình bạn thấy — không bao giờ rời khỏi nhật ký của bạn.',
+  'visibility.friendOnly.helper':
+    'Bạn bè có thể thấy khoản này trên Bảng xếp hạng với @{username} của bạn.',
+  'visibility.public.helper':
+    'Mọi người có thể thấy khoản này trên Bảng tin với @{username} của bạn.',
+
+  'expenseForm.title': 'Khoản chi mới',
+  'expenseForm.close': 'Đóng',
+  'expenseForm.descriptionLabel': 'Mô tả',
+  'expenseForm.descriptionPlaceholder': 'Cà phê với bạn',
+  'expenseForm.amountLabel': 'Số tiền',
+  'expenseForm.amountHint':
+    'Được quy đổi sang {currency} theo tỷ giá hôm nay và giữ nguyên khi lưu',
+  'expenseForm.categoryLabel': 'Danh mục',
+  'expenseForm.visibilityLabel': 'Chế độ hiển thị',
+  'expenseForm.dateLabel': 'Ngày chi tiêu',
+  'expenseForm.submit': 'Lưu khoản chi',
 
   'profile.preferences': 'Tùy chọn',
   'profile.account': 'Tài khoản',
@@ -59,8 +93,12 @@ export const vi: Record<TranslationKey, string> = {
   'validation.username': '3–30 ký tự: chỉ chữ thường, số và dấu gạch dưới.',
   'validation.email': 'Nhập một địa chỉ email hợp lệ.',
   'validation.password': 'Mật khẩu phải có từ 8–128 ký tự.',
+  'validation.expenseDescription': 'Nhập mô tả tối đa 500 ký tự.',
+  'validation.expenseAmount': 'Nhập số tiền lớn hơn 0.',
 
   'apiError.generic': 'Đã xảy ra lỗi. Vui lòng thử lại.',
   'apiError.network':
     'Không thể kết nối đến máy chủ. Kiểm tra kết nối và thử lại.',
+  'apiError.rateUnavailable':
+    'Chúng tôi chưa có tỷ giá cho loại tiền này. Vui lòng thử lại sau, hoặc ghi khoản này bằng tiền tệ ưa thích của bạn.',
 };

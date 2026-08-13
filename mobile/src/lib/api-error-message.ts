@@ -15,9 +15,32 @@ import type { TranslationKey } from '@/i18n/en';
 export type ApiErrorMessage =
   { kind: 'server'; text: string } | { kind: 'key'; key: TranslationKey };
 
+/** True for the one 503 body that is about rate coverage rather than server health. */
+function mentionsMissingDailyRate(body: unknown): boolean {
+  if (!body || typeof body !== 'object' || !('message' in body)) return false;
+  const message = (body as { message?: unknown }).message;
+  return typeof message === 'string' && /no daily rate/i.test(message);
+}
+
 export function getErrorMessage(error: unknown): ApiErrorMessage {
   if (error instanceof ApiError) {
     const body = error.body;
+
+    if (error.status === 503 && mentionsMissingDailyRate(body)) {
+      // ConversionService's 503 (backend/src/daily-rates/conversion.service.ts):
+      // the Daily Rate table has no coverage for a currency pair yet. Its
+      // relayed message ("No Daily Rate available for USD -> VND on or
+      // before …") is accurate but not something to show a user — this key is.
+      //
+      // Matched on the message, not on 503 alone: a 503 is also what a
+      // restarting or unhealthy server answers with, and blaming those on the
+      // user's choice of currency would send them to change something that
+      // was never the problem. Anything else falls through to the handling
+      // below, so a reworded server message degrades to the generic error
+      // rather than to a wrong one.
+      return { kind: 'key', key: 'apiError.rateUnavailable' };
+    }
+
     if (body && typeof body === 'object' && 'message' in body) {
       const message = (body as { message?: unknown }).message;
       if (typeof message === 'string' && message.length > 0) {
