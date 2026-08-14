@@ -129,6 +129,9 @@ model Expense {
 
   // Backs "list the owner's own expenses, newest first" (GET /expenses).
   @@index([ownerId, loggedAt])
+  // Backs personal statistics (GET /expenses/statistics, issue #7), which
+  // groups by Expense Date, never Logged At.
+  @@index([ownerId, expenseDate])
   @@map("expenses")
 }
 

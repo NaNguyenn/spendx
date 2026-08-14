@@ -21,6 +21,13 @@ export const vi: Record<TranslationKey, string> = {
   'logButton.accessibilityLabel': 'Ghi chi tiêu',
 
   'expenses.subtitle': 'Nhật ký của bạn · mọi chế độ hiển thị',
+  'statistics.periodToggle.week': 'Tuần này',
+  'statistics.periodToggle.month': 'Tháng này',
+  'statistics.overline.total': 'TỔNG',
+  'statistics.delta.lessThanWeek': 'ít hơn tuần trước',
+  'statistics.delta.lessThanMonth': 'ít hơn tháng trước',
+  'statistics.delta.moreThanWeek': 'nhiều hơn tuần trước',
+  'statistics.delta.moreThanMonth': 'nhiều hơn tháng trước',
   'expenses.recent': 'Gần đây',
   'expenses.empty.title': 'Chưa có khoản chi nào',
   'expenses.empty.note':

@@ -15,6 +15,19 @@ export type ExpenseWithConversions = Expense & {
   conversions: ExpenseConversion[];
 };
 
+/**
+ * One Expense's Category and its Conversion Snapshot entry for a single
+ * currency — see {@link ExpensesRepository.findCategoryAmountsForOwnerInRange}.
+ * `amount` is `null` only when that entry is missing, which the all-or-
+ * nothing write rule (ADR-0008) makes an invariant breach, not a normal
+ * case; callers must fail loudly on it rather than under-total silently.
+ */
+export interface ExpenseCategoryAmount {
+  expenseId: string;
+  category: Category;
+  amount: Prisma.Decimal | null;
+}
+
 export interface CreateExpenseData {
   ownerId: string;
   description: string;
@@ -71,6 +84,36 @@ export class ExpensesRepository {
       orderBy: { loggedAt: 'desc' },
       include: { conversions: true },
     });
+  }
+
+  /**
+   * Every owner's Expense (every Visibility — ADR-0003) whose Expense Date
+   * falls within `[range.start, range.end]` inclusive, narrowed to its
+   * Category and its Conversion Snapshot entry for `currency` — the shape
+   * personal statistics (issue #7, `GET /expenses/statistics`) aggregates
+   * from. Grouping is by Expense Date, never Logged At.
+   */
+  async findCategoryAmountsForOwnerInRange(
+    ownerId: string,
+    currency: SupportedCurrency,
+    range: { start: Date; end: Date },
+  ): Promise<ExpenseCategoryAmount[]> {
+    const rows = await this.prisma.expense.findMany({
+      where: {
+        ownerId,
+        expenseDate: { gte: range.start, lte: range.end },
+      },
+      select: {
+        id: true,
+        category: true,
+        conversions: { where: { currency }, select: { amount: true } },
+      },
+    });
+    return rows.map((row) => ({
+      expenseId: row.id,
+      category: row.category,
+      amount: row.conversions[0]?.amount ?? null,
+    }));
   }
 
   /**

@@ -20,6 +20,7 @@ import {
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseDto } from './dto/expense.dto';
+import { StatisticsDto } from './dto/statistics.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesService } from './expenses.service';
 
@@ -47,6 +48,20 @@ export class ExpensesController {
   @ApiOkResponse({ type: ExpenseDto, isArray: true })
   findAll(@CurrentUserId() ownerId: string): Promise<ExpenseDto[]> {
     return this.expensesService.findAllForOwner(ownerId);
+  }
+
+  @Get('statistics')
+  @ApiOperation({
+    summary: "The caller's personal statistics",
+    description:
+      'Current-ISO-week and current-calendar-month totals and Category ' +
+      'breakdowns, each against the immediately preceding Period, in the ' +
+      "caller's Preferred Currency. Owner-scoped over every Visibility — " +
+      'full spending appears only here (ADR-0003).',
+  })
+  @ApiOkResponse({ type: StatisticsDto })
+  statistics(@CurrentUserId() ownerId: string): Promise<StatisticsDto> {
+    return this.expensesService.statistics(ownerId);
   }
 
   @Patch(':id')

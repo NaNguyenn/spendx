@@ -120,6 +120,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/expenses/statistics': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The caller's personal statistics
+     * @description Current-ISO-week and current-calendar-month totals and Category breakdowns, each against the immediately preceding Period, in the caller's Preferred Currency. Owner-scoped over every Visibility — full spending appears only here (ADR-0003).
+     */
+    get: operations['ExpensesController_statistics'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/expenses/{id}': {
     parameters: {
       query?: never;
@@ -274,6 +294,46 @@ export interface components {
       expenseDate: string;
       /** @description ISO 8601 — the immutable Logged At. */
       loggedAt: string;
+    };
+    CategoryTotalDto: {
+      category: components['schemas']['Category'];
+      /**
+       * @description The summed Converted Amount for this Category within the Period, in the owner's Preferred Currency, as a fixed-scale decimal string (4 decimal places). Never a JSON number.
+       * @example 450000.0000
+       */
+      total: string;
+    };
+    PeriodStatisticsDto: {
+      /**
+       * @description YYYY-MM-DD, inclusive.
+       * @example 2026-08-03
+       */
+      start: string;
+      /**
+       * @description YYYY-MM-DD, inclusive.
+       * @example 2026-08-09
+       */
+      end: string;
+      /**
+       * @description The summed Converted Amount over the Period, in the owner's Preferred Currency, as a fixed-scale decimal string (4 decimal places). Never a JSON number.
+       * @example 4850000.0000
+       */
+      total: string;
+      /**
+       * @description The same total for the immediately preceding Period of the same length (previous ISO week or previous calendar month), for comparison.
+       * @example 3200000.0000
+       */
+      previousTotal: string;
+      /** @description Every Category (backend/CONTEXT.md), including zero totals, sorted by total descending; ties broken by the canonical Category order. */
+      categories: components['schemas']['CategoryTotalDto'][];
+    };
+    StatisticsDto: {
+      /** @description The owner's Preferred Currency — every total below is in it. */
+      currency: components['schemas']['SupportedCurrency'];
+      /** @description The current ISO week (Monday through Sunday). */
+      week: components['schemas']['PeriodStatisticsDto'];
+      /** @description The current calendar month. */
+      month: components['schemas']['PeriodStatisticsDto'];
     };
     UpdateExpenseDto: {
       /** @example Coffee with a friend */
@@ -483,6 +543,25 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ExpenseDto'];
+        };
+      };
+    };
+  };
+  ExpensesController_statistics: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StatisticsDto'];
         };
       };
     };

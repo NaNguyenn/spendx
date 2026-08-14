@@ -72,6 +72,29 @@ export function isIsoTimestamp(value: unknown): boolean {
   return typeof value === 'string' && new Date(value).toISOString() === value;
 }
 
+export interface CategoryTotalBody {
+  category: string;
+  total: string;
+}
+
+export interface PeriodStatisticsBody {
+  start: string;
+  end: string;
+  total: string;
+  previousTotal: string;
+  categories: CategoryTotalBody[];
+}
+
+export interface StatisticsBody {
+  currency: string;
+  week: PeriodStatisticsBody;
+  month: PeriodStatisticsBody;
+}
+
+export function statisticsBody(response: Response): StatisticsBody {
+  return response.body as StatisticsBody;
+}
+
 interface ErrorBody {
   message: string | string[];
 }

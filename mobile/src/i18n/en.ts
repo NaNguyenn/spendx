@@ -25,6 +25,13 @@ export const en = {
   'logButton.accessibilityLabel': 'Log expense',
 
   'expenses.subtitle': 'Your log · all visibilities',
+  'statistics.periodToggle.week': 'This week',
+  'statistics.periodToggle.month': 'This month',
+  'statistics.overline.total': 'TOTAL',
+  'statistics.delta.lessThanWeek': 'less than last week',
+  'statistics.delta.lessThanMonth': 'less than last month',
+  'statistics.delta.moreThanWeek': 'more than last week',
+  'statistics.delta.moreThanMonth': 'more than last month',
   'expenses.recent': 'Recent',
   'expenses.empty.title': 'Nothing logged yet',
   'expenses.empty.note': 'Tap the log button below to add your first expense.',

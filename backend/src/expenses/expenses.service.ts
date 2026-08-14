@@ -11,12 +11,25 @@ import {
   calendarDateToDate,
 } from '../domain/calendar-date';
 import type { SupportedCurrency } from '../domain/currency';
+import {
+  calendarMonthOf,
+  isoWeekOf,
+  previousCalendarMonthOf,
+  previousIsoWeekOf,
+  type DateRange,
+} from '../domain/period';
 import { UsersRepository } from '../users/users.repository';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseDto } from './dto/expense.dto';
+import { PeriodStatisticsDto } from './dto/period-statistics.dto';
+import { StatisticsDto } from './dto/statistics.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { toExpenseDto } from './expense-view';
-import { ExpensesRepository } from './expenses.repository';
+import {
+  ExpensesRepository,
+  type ExpenseCategoryAmount,
+} from './expenses.repository';
+import { summarizeCategoryTotals } from './statistics-view';
 
 @Injectable()
 export class ExpensesService {
@@ -112,6 +125,90 @@ export class ExpensesService {
     if (!deleted) {
       throw new NotFoundException('Expense not found');
     }
+  }
+
+  /**
+   * The owner's personal statistics (issue #7): the current ISO week's and
+   * calendar month's totals and Category breakdowns, each against the
+   * immediately preceding Period of the same length, in the owner's
+   * Preferred Currency. Owner-scoped over every Visibility — full spending
+   * appears only here (ADR-0003) — and grouped by Expense Date, never
+   * Logged At. "Current" is `CLOCK.now()` resolved to a calendar date in the
+   * fixed app timezone (ADR-0004).
+   */
+  async statistics(ownerId: string): Promise<StatisticsDto> {
+    const preferredCurrency = await this.preferredCurrencyOf(ownerId);
+    const today = calendarDateInAppTimezone(this.clock.now());
+
+    // Both Periods' own current/previous pairs are kicked off before either
+    // is awaited, so all four range queries still run concurrently overall.
+    const [week, month] = await Promise.all([
+      this.periodStatistics(
+        ownerId,
+        preferredCurrency,
+        isoWeekOf(today),
+        previousIsoWeekOf(today),
+      ),
+      this.periodStatistics(
+        ownerId,
+        preferredCurrency,
+        calendarMonthOf(today),
+        previousCalendarMonthOf(today),
+      ),
+    ]);
+
+    return { currency: preferredCurrency, week, month };
+  }
+
+  /**
+   * One Period's statistics: `current`'s Category breakdown and grand
+   * total, plus `previous`'s grand total for comparison — the shared shape
+   * behind both `week` and `month` in {@link statistics}.
+   */
+  private async periodStatistics(
+    ownerId: string,
+    currency: SupportedCurrency,
+    current: DateRange,
+    previous: DateRange,
+  ): Promise<PeriodStatisticsDto> {
+    const [currentEntries, previousEntries] = await Promise.all([
+      this.categoryAmountsFor(ownerId, currency, current),
+      this.categoryAmountsFor(ownerId, currency, previous),
+    ]);
+
+    const currentTotals = summarizeCategoryTotals(
+      currentEntries,
+      ownerId,
+      currency,
+    );
+    const previousTotals = summarizeCategoryTotals(
+      previousEntries,
+      ownerId,
+      currency,
+    );
+
+    return {
+      start: current.start,
+      end: current.end,
+      total: currentTotals.total,
+      previousTotal: previousTotals.total,
+      categories: currentTotals.categories,
+    };
+  }
+
+  private categoryAmountsFor(
+    ownerId: string,
+    currency: SupportedCurrency,
+    range: DateRange,
+  ): Promise<ExpenseCategoryAmount[]> {
+    return this.expensesRepository.findCategoryAmountsForOwnerInRange(
+      ownerId,
+      currency,
+      {
+        start: calendarDateToDate(range.start),
+        end: calendarDateToDate(range.end),
+      },
+    );
   }
 
   /**

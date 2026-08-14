@@ -254,6 +254,32 @@
         "tags": ["expenses"]
       }
     },
+    "/expenses/statistics": {
+      "get": {
+        "description": "Current-ISO-week and current-calendar-month totals and Category breakdowns, each against the immediately preceding Period, in the caller's Preferred Currency. Owner-scoped over every Visibility — full spending appears only here (ADR-0003).",
+        "operationId": "ExpensesController_statistics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's personal statistics",
+        "tags": ["expenses"]
+      }
+    },
     "/expenses/{id}": {
       "patch": {
         "description": "Owner-only. The Converted Amount is re-derived at the original logging date's Daily Rate, never the edit date's (ADR-0002).",
@@ -668,6 +694,87 @@
           "expenseDate",
           "loggedAt"
         ]
+      },
+      "CategoryTotalDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ]
+          },
+          "total": {
+            "type": "string",
+            "description": "The summed Converted Amount for this Category within the Period, in the owner's Preferred Currency, as a fixed-scale decimal string (4 decimal places). Never a JSON number.",
+            "example": "450000.0000"
+          }
+        },
+        "required": ["category", "total"]
+      },
+      "PeriodStatisticsDto": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "YYYY-MM-DD, inclusive.",
+            "example": "2026-08-03"
+          },
+          "end": {
+            "type": "string",
+            "description": "YYYY-MM-DD, inclusive.",
+            "example": "2026-08-09"
+          },
+          "total": {
+            "type": "string",
+            "description": "The summed Converted Amount over the Period, in the owner's Preferred Currency, as a fixed-scale decimal string (4 decimal places). Never a JSON number.",
+            "example": "4850000.0000"
+          },
+          "previousTotal": {
+            "type": "string",
+            "description": "The same total for the immediately preceding Period of the same length (previous ISO week or previous calendar month), for comparison.",
+            "example": "3200000.0000"
+          },
+          "categories": {
+            "description": "Every Category (backend/CONTEXT.md), including zero totals, sorted by total descending; ties broken by the canonical Category order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryTotalDto"
+            }
+          }
+        },
+        "required": ["start", "end", "total", "previousTotal", "categories"]
+      },
+      "StatisticsDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "description": "The owner's Preferred Currency — every total below is in it.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "week": {
+            "description": "The current ISO week (Monday through Sunday).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PeriodStatisticsDto"
+              }
+            ]
+          },
+          "month": {
+            "description": "The current calendar month.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PeriodStatisticsDto"
+              }
+            ]
+          }
+        },
+        "required": ["currency", "week", "month"]
       },
       "UpdateExpenseDto": {
         "type": "object",
