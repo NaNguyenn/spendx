@@ -147,6 +147,18 @@ function fixtureRate(
  * pairs are skipped: the Conversion Snapshot's identity entry never does a
  * lookup (`ConversionService.snapshot()`), so those rows would be dead
  * weight.
+ *
+ * Ids are derived from (base, quote, rateDate) — the same columns the table's
+ * unique constraint covers — not from loop position. `createMany` below runs
+ * with `skipDuplicates`, which is `ON CONFLICT DO NOTHING` against ANY unique
+ * violation, PK included. A positional id (`..."-100000000001"`, `...-002`,
+ * …) only lines up with a given (base, quote) pair by accident of insertion
+ * order, so a foreign row already sitting at that id silently absorbs the
+ * conflict and the real pair never gets written — this happened: pre-ADR-0008
+ * rows left at the first two positional ids ate the VND and USD rows on
+ * re-seed, and every VND-original Expense 503'd for missing Daily Rate
+ * coverage. Content-derived ids make the PK and the unique key collide on
+ * the same row, so skipDuplicates can only ever skip a pair against itself.
  */
 function buildDailyRates(): Array<{
   id: string;
@@ -167,7 +179,7 @@ function buildDailyRates(): Array<{
     for (const quoteCurrency of SUPPORTED_CURRENCIES) {
       if (baseCurrency === quoteCurrency) continue;
       rows.push({
-        id: `01920000-0000-7000-8100-${String(rows.length + 1).padStart(12, '0')}`,
+        id: `dev-fixture-${baseCurrency}-${quoteCurrency}-${RATE_DATE}`,
         baseCurrency,
         quoteCurrency,
         rateDate,
