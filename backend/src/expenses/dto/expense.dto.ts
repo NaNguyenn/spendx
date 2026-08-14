@@ -20,8 +20,9 @@ export class ExpenseDto {
 
   @ApiProperty({
     description:
-      'The Original Amount, exactly as entered, as a fixed-scale decimal ' +
-      'string (4 decimal places). Never a JSON number.',
+      'The Original Amount, exactly as entered and immutable after logging ' +
+      '(ADR-0008), as a fixed-scale decimal string (4 decimal places). ' +
+      'Never a JSON number.',
     example: '45000.0000',
   })
   originalAmount!: string;
@@ -31,9 +32,10 @@ export class ExpenseDto {
 
   @ApiProperty({
     description:
-      'The Converted Amount: the Original Amount converted into the ' +
-      "owner's Preferred Currency at the logging date's Daily Rate, and " +
-      'frozen. A fixed-scale decimal string (4 decimal places).',
+      "The Converted Amount: the Conversion Snapshot's entry for the " +
+      "reader's Preferred Currency — derived at the logging date's Daily " +
+      'Rate and frozen (ADR-0008). A fixed-scale decimal string (4 decimal ' +
+      'places).',
     example: '1.9565',
   })
   convertedAmount!: string;

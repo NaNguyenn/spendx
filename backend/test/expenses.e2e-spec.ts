@@ -1,11 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { SUPPORTED_CURRENCIES } from '../src/domain/currency';
 import { createTestApp } from './helpers/app';
 import { signUp } from './helpers/auth';
 import { FixedClock } from './helpers/clock';
 import { FakeDailyRateProvider } from './helpers/daily-rate-provider';
-import { seedDailyRate } from './helpers/daily-rates';
+import { seedDailyRate, seedDailyRatesFromBase } from './helpers/daily-rates';
+import { testDb } from './helpers/database';
 import { createExpense, validCreateExpenseBody } from './helpers/expenses';
 import {
   authBody,
@@ -61,11 +63,10 @@ describe('expenses', () => {
       const token = await signUpForToken('USD');
       clock.set(new Date('2026-08-01T10:00:00.000Z')); // logging day 2026-08-01 in +07:00 too
 
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'VND',
-        quoteCurrency: 'USD',
         date: '2026-08-01',
-        rate: '0.0000400000',
+        rates: { USD: '0.0000400000' },
       });
 
       const { response } = await createExpense(app, token, {
@@ -92,11 +93,10 @@ describe('expenses', () => {
       const token = await signUpForToken('USD');
       clock.set(new Date('2026-08-05T04:00:00.000Z')); // logging day 2026-08-05
 
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'VND',
-        quoteCurrency: 'USD',
         date: '2026-08-05', // the logging date's rate — must win
-        rate: '0.0000500000',
+        rates: { USD: '0.0000500000' },
       });
       await seedDailyRate(app, rateProvider, {
         baseCurrency: 'VND',
@@ -121,11 +121,10 @@ describe('expenses', () => {
       const token = await signUpForToken('USD');
       clock.set(new Date('2026-08-10T04:00:00.000Z')); // logging day 2026-08-10, no rate seeded for it
 
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'VND',
-        quoteCurrency: 'USD',
         date: '2026-08-07', // older — must be used
-        rate: '0.0000400000',
+        rates: { USD: '0.0000400000' },
       });
       await seedDailyRate(app, rateProvider, {
         baseCurrency: 'VND',
@@ -143,10 +142,21 @@ describe('expenses', () => {
       expect(expenseBody(response).convertedAmount).toBe('40.0000');
     });
 
-    it('converts a same-currency Expense 1:1, with no Daily Rate lookup at all', async () => {
+    it("keeps the same-currency entry exact identity, never a rate's product", async () => {
       const token = await signUpForToken('USD');
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
-      // Deliberately no seeded rate — a lookup here would 503.
+      // Every pair carries a deliberately absurd rate: if the USD entry of a
+      // USD Expense went through any rate at all, the amount would double.
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'USD',
+        date: '2026-08-01',
+        rates: Object.fromEntries(
+          SUPPORTED_CURRENCIES.filter((c) => c !== 'USD').map((c) => [
+            c,
+            '2.0000000000',
+          ]),
+        ),
+      });
 
       const { response } = await createExpense(app, token, {
         originalAmount: '123.4500',
@@ -163,7 +173,7 @@ describe('expenses', () => {
     it('fails loudly with 503 when no Daily Rate exists on or before the logging date', async () => {
       const token = await signUpForToken('USD');
       clock.set(new Date('2026-09-01T10:00:00.000Z'));
-      // No VND -> USD rate seeded anywhere.
+      // No rate seeded anywhere.
 
       const { response } = await createExpense(app, token, {
         originalAmount: '1000.0000',
@@ -174,6 +184,88 @@ describe('expenses', () => {
       expect(errorMessage(response)).toMatch(/No Daily Rate available/);
     });
 
+    // ADR-0008: the Conversion Snapshot is all-or-nothing. One uncovered
+    // pair fails the whole log — even though the pair the owner's own
+    // projection needs (VND -> USD) is covered — and persists nothing.
+    it('rejects the whole log with 503 when any single pair lacks coverage, persisting nothing', async () => {
+      const token = await signUpForToken('USD');
+      clock.set(new Date('2026-08-01T10:00:00.000Z'));
+
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+        rates: { USD: '0.0000400000' },
+        omit: ['THB'], // the one gap
+      });
+
+      const { response } = await createExpense(app, token, {
+        originalAmount: '1000000.0000',
+        originalCurrency: 'VND',
+      });
+
+      expect(response.status).toBe(503);
+      expect(errorMessage(response)).toMatch(/No Daily Rate available/);
+      expect(errorMessage(response)).toMatch(/THB/);
+
+      const list = await request(app.getHttpServer())
+        .get('/expenses')
+        .set('Authorization', `Bearer ${token}`);
+      expect(expenseListBody(list)).toEqual([]);
+    });
+
+    // The snapshot's non-preferred entries are invisible through today's API
+    // (viewer endpoints arrive with the social tickets), so this one test
+    // verifies ADR-0008's persistence contract at the table itself: one row
+    // per Supported Currency, each the Original Amount times that pair's
+    // exact Daily Rate, rounded to the money columns' 4 decimal places.
+    it('freezes one conversion row per Supported Currency at the logging date, exact to 4 decimal places', async () => {
+      const token = await signUpForToken('USD');
+      clock.set(new Date('2026-08-01T10:00:00.000Z'));
+
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'GBP',
+        date: '2026-08-01',
+        rates: {
+          USD: '1.3500000000',
+          VND: '35172.1100000000',
+          EUR: '1.1700000000',
+          JPY: '215.0600000000',
+          SGD: '1.7300000000',
+          AUD: '1.9100000000',
+          CAD: '1.8800000000',
+          KRW: '1905.8000000000',
+          THB: '44.8300000000',
+        },
+      });
+
+      const { response } = await createExpense(app, token, {
+        originalAmount: '2.0000',
+        originalCurrency: 'GBP',
+      });
+      expect(response.status).toBe(201);
+      const { id } = expenseBody(response);
+
+      const rows = await testDb().expenseConversion.findMany({
+        where: { expenseId: id },
+      });
+      const byCurrency = Object.fromEntries(
+        rows.map((row) => [row.currency, row.amount.toFixed(4)]),
+      );
+      expect(byCurrency).toEqual({
+        GBP: '2.0000', // identity — exactly as entered
+        USD: '2.7000',
+        VND: '70344.2200',
+        EUR: '2.3400',
+        JPY: '430.1200',
+        SGD: '3.4600',
+        AUD: '3.8200',
+        CAD: '3.7600',
+        KRW: '3811.6000',
+        THB: '89.6600',
+      });
+      expect(rows).toHaveLength(SUPPORTED_CURRENCIES.length);
+    });
+
     // Decimal safety: 1.005 * 100 is 100.49999999999999 as a JS float, but
     // exactly 100.5 with decimal.js — proving the conversion arithmetic
     // never touches a `number`.
@@ -181,11 +273,10 @@ describe('expenses', () => {
       const token = await signUpForToken('VND');
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
 
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'EUR',
-        quoteCurrency: 'VND',
         date: '2026-08-01',
-        rate: '100.0000000000',
+        rates: { VND: '100.0000000000' },
       });
 
       const { response } = await createExpense(app, token, {
@@ -202,6 +293,10 @@ describe('expenses', () => {
     it('round-trips a large VND amount at the Decimal(20,4) boundary exactly', async () => {
       const token = await signUpForToken('VND');
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response } = await createExpense(app, token, {
         originalAmount: '9999999999999999.9999',
@@ -222,9 +317,13 @@ describe('expenses', () => {
       async (instant, expectedExpenseDate) => {
         const token = await signUpForToken('VND');
         clock.set(new Date(instant));
+        await seedDailyRatesFromBase(app, rateProvider, {
+          baseCurrency: 'VND',
+          date: '2026-08-01', // at-or-before both logging days
+        });
 
         const { response } = await createExpense(app, token, {
-          originalCurrency: 'VND', // same-currency: no rate needed
+          originalCurrency: 'VND',
         });
 
         expect(response.status).toBe(201);
@@ -235,6 +334,10 @@ describe('expenses', () => {
     it('accepts an explicit backdated Expense Date', async () => {
       const token = await signUpForToken('VND');
       clock.set(new Date('2026-08-12T10:00:00.000Z'));
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response } = await createExpense(app, token, {
         originalCurrency: 'VND',
@@ -313,9 +416,13 @@ describe('expenses', () => {
     it('renders a shorter-scale Original Amount at the column scale, same value', async () => {
       // "Exactly as entered" is value-exact, not byte-exact: amounts render
       // at the Decimal(20, 4) columns' fixed scale so a client never has to
-      // guess how many decimal places it got. Same currency, so no rate is
-      // involved and only the scaling is under test.
+      // guess how many decimal places it got. Same currency, so no rate
+      // touches the asserted entries and only the scaling is under test.
       const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response } = await createExpense(app, token, {
         originalAmount: '45000',
@@ -337,6 +444,10 @@ describe('expenses', () => {
 
     it("lists the owner's own Expenses across every Visibility, newest logged first", async () => {
       const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
       const { body: first } = await createExpense(app, token, {
@@ -380,6 +491,10 @@ describe('expenses', () => {
     it("never returns another User's Expenses", async () => {
       const ownerToken = await signUpForToken('VND');
       const strangerToken = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
       await createExpense(app, ownerToken, {
@@ -406,11 +521,10 @@ describe('expenses', () => {
       // differ in both amount and currency — a list response that dropped
       // either currency, or echoed one amount for both, fails here.
       const token = await signUpForToken('USD');
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'VND',
-        quoteCurrency: 'USD',
         date: '2026-08-01',
-        rate: '0.0000400000',
+        rates: { USD: '0.0000400000' },
       });
 
       await createExpense(app, token, {
@@ -438,11 +552,10 @@ describe('expenses', () => {
       // the Expense after the rate moves must return the amount computed on
       // the logging date, not one recomputed at read time.
       const token = await signUpForToken('USD');
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'VND',
-        quoteCurrency: 'USD',
         date: '2026-08-01',
-        rate: '0.0000400000',
+        rates: { USD: '0.0000400000' },
       });
 
       const { response: created } = await createExpense(app, token, {
@@ -469,6 +582,51 @@ describe('expenses', () => {
       expect(expenseListBody(response)[0]?.convertedAmount).toBe('2.0000');
     });
 
+    // ADR-0008's payoff: a Preferred Currency change is a pure read-path
+    // switch. The same Expense re-projects from its frozen snapshot — the
+    // VND entry it got at logging time — with no recompute and no rate
+    // lookup on read. The currency flip is arranged directly on the users
+    // table because no API updates Preferred Currency yet (a later ticket).
+    it("projects the frozen entry for the owner's new Preferred Currency after a switch, without recomputing", async () => {
+      const { response: signedUp } = await signUp(app, {
+        preferredCurrency: 'USD',
+      });
+      const { accessToken: token, user } = authBody(signedUp);
+
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'GBP',
+        date: '2026-08-01',
+        rates: { USD: '1.3500000000', VND: '35000.0000000000' },
+      });
+      await createExpense(app, token, {
+        originalAmount: '2.0000',
+        originalCurrency: 'GBP',
+      });
+
+      // A moved VND rate that a read-time reconversion would pick up.
+      await seedDailyRate(app, rateProvider, {
+        baseCurrency: 'GBP',
+        quoteCurrency: 'VND',
+        date: '2026-08-05',
+        rate: '90000.0000000000',
+      });
+      clock.set(new Date('2026-08-05T10:00:00.000Z'));
+      await testDb().user.update({
+        where: { id: user.id },
+        data: { preferredCurrency: 'VND' },
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/expenses')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(expenseListBody(response)[0]).toMatchObject({
+        convertedAmount: '70000.0000', // 2 GBP * 35,000 — the frozen entry
+        convertedCurrency: 'VND',
+      });
+    });
+
     it('returns an empty list for an owner with no Expenses', async () => {
       const token = await signUpForToken();
 
@@ -492,6 +650,10 @@ describe('expenses', () => {
     it('edits every editable field and returns the updated Expense', async () => {
       const token = await signUpForToken('VND');
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response: created } = await createExpense(app, token, {
         description: 'Coffee',
@@ -507,7 +669,6 @@ describe('expenses', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({
           description: 'Dinner out',
-          originalAmount: '120000.0000',
           category: 'leisure',
           visibility: 'public',
           expenseDate: '2026-07-15',
@@ -518,9 +679,9 @@ describe('expenses', () => {
       expect(updated).toMatchObject({
         id: original.id,
         description: 'Dinner out',
-        originalAmount: '120000.0000',
+        originalAmount: '45000.0000',
         originalCurrency: 'VND',
-        convertedAmount: '120000.0000',
+        convertedAmount: '45000.0000',
         convertedCurrency: 'VND',
         category: 'leisure',
         visibility: 'public',
@@ -530,83 +691,57 @@ describe('expenses', () => {
       expect(updated.loggedAt).toBe(original.loggedAt);
     });
 
-    // ADR-0002 and the issue's core rule: edits re-derive the Converted
-    // Amount at the *original logging date's* Daily Rate, never the edit
-    // date's.
-    it("re-derives the Converted Amount at the original logging date's rate, not the edit date's", async () => {
-      const token = await signUpForToken('USD');
-      clock.set(new Date('2026-08-01T10:00:00.000Z')); // logging day 2026-08-01
+    // ADR-0008: the Original Amount is immutable after logging — fixing it
+    // means delete + re-log. The whitelist rejects both fields outright.
+    it.each([
+      [{ originalAmount: '2000000.0000' }, /originalAmount/i],
+      [{ originalCurrency: 'EUR' }, /originalCurrency/i],
+    ])(
+      'rejects an edit of the immutable Original Amount: %o',
+      async (body, field) => {
+        const token = await signUpForToken('USD');
+        clock.set(new Date('2026-08-01T10:00:00.000Z'));
+        await seedDailyRatesFromBase(app, rateProvider, {
+          baseCurrency: 'VND',
+          date: '2026-08-01',
+          rates: { USD: '0.0000400000' },
+        });
 
-      await seedDailyRate(app, rateProvider, {
-        baseCurrency: 'VND',
-        quoteCurrency: 'USD',
-        date: '2026-08-01', // the logging date's rate — must win
-        rate: '0.0000400000',
-      });
-      await seedDailyRate(app, rateProvider, {
-        baseCurrency: 'VND',
-        quoteCurrency: 'USD',
-        date: '2026-08-05', // the edit date's rate — must lose
-        rate: '0.0000800000',
-      });
+        const { response: created } = await createExpense(app, token, {
+          originalAmount: '1000000.0000',
+          originalCurrency: 'VND',
+        });
+        const original = expenseBody(created);
 
-      const { response: created } = await createExpense(app, token, {
-        originalAmount: '1000000.0000',
-        originalCurrency: 'VND',
-      });
-      const original = expenseBody(created);
-      expect(original.convertedAmount).toBe('40.0000');
+        const response = await request(app.getHttpServer())
+          .patch(`/expenses/${original.id}`)
+          .set('Authorization', `Bearer ${token}`)
+          .send(body);
 
-      clock.set(new Date('2026-08-05T10:00:00.000Z')); // editing four days later
+        expect(response.status).toBe(400);
+        expect(errorMessage(response)).toMatch(field);
 
-      const response = await request(app.getHttpServer())
-        .patch(`/expenses/${original.id}`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ originalAmount: '2000000.0000' });
-
-      expect(response.status).toBe(200);
-      // 160.0000 would mean the edit date's rate was used.
-      expect(expenseBody(response).convertedAmount).toBe('80.0000');
-    });
-
-    it("re-derives at the logging date's rate when the currency changes", async () => {
-      const token = await signUpForToken('USD');
-      clock.set(new Date('2026-08-01T10:00:00.000Z'));
-
-      await seedDailyRate(app, rateProvider, {
-        baseCurrency: 'EUR',
-        quoteCurrency: 'USD',
-        date: '2026-08-01',
-        rate: '1.1000000000',
-      });
-
-      const { response: created } = await createExpense(app, token, {
-        originalAmount: '100.0000',
-        originalCurrency: 'USD', // same-currency at first: no rate involved
-      });
-      const original = expenseBody(created);
-
-      const response = await request(app.getHttpServer())
-        .patch(`/expenses/${original.id}`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ originalCurrency: 'EUR' });
-
-      expect(response.status).toBe(200);
-      const updated = expenseBody(response);
-      expect(updated.originalCurrency).toBe('EUR');
-      expect(updated.convertedAmount).toBe('110.0000'); // 100 EUR * 1.1
-      expect(updated.convertedCurrency).toBe('USD');
-    });
+        // The Expense is exactly as logged — amount, currency, conversion.
+        const list = await request(app.getHttpServer())
+          .get('/expenses')
+          .set('Authorization', `Bearer ${token}`);
+        expect(expenseListBody(list)[0]).toMatchObject({
+          originalAmount: '1000000.0000',
+          originalCurrency: 'VND',
+          convertedAmount: '40.0000',
+          convertedCurrency: 'USD',
+        });
+      },
+    );
 
     it('moves the Expense Date without changing the Converted Amount', async () => {
       const token = await signUpForToken('USD');
       clock.set(new Date('2026-08-01T10:00:00.000Z'));
 
-      await seedDailyRate(app, rateProvider, {
+      await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'VND',
-        quoteCurrency: 'USD',
         date: '2026-08-01',
-        rate: '0.0000400000',
+        rates: { USD: '0.0000400000' },
       });
 
       const { response: created } = await createExpense(app, token, {
@@ -638,6 +773,10 @@ describe('expenses', () => {
     it("returns 404 for another User's Expense and leaves it untouched", async () => {
       const ownerToken = await signUpForToken('VND');
       const strangerToken = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response: created } = await createExpense(app, ownerToken, {
         description: 'mine',
@@ -668,13 +807,16 @@ describe('expenses', () => {
 
     it('rejects the same malformed values create rejects', async () => {
       const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
       const { response: created } = await createExpense(app, token, {
         originalCurrency: 'VND',
       });
       const { id } = expenseBody(created);
 
       for (const [body, field] of [
-        [{ originalAmount: '-5.00' }, /originalAmount/i],
         [{ category: 'crypto' }, /category/i],
         [{ visibility: 'friends-only' }, /visibility/i],
         [{ expenseDate: '2026-13-40' }, /expenseDate/i],
@@ -691,6 +833,10 @@ describe('expenses', () => {
 
     it('accepts an empty body as a no-op edit', async () => {
       const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
       const { response: created } = await createExpense(app, token, {
         originalCurrency: 'VND',
       });
@@ -715,6 +861,10 @@ describe('expenses', () => {
 
     it('deletes an Expense so it is gone from the list, leaving others alone', async () => {
       const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response: first } = await createExpense(app, token, {
         description: 'keep me',
@@ -743,6 +893,10 @@ describe('expenses', () => {
     it("returns 404 for another User's Expense and leaves it in place", async () => {
       const ownerToken = await signUpForToken('VND');
       const strangerToken = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
 
       const { response: created } = await createExpense(app, ownerToken, {
         originalCurrency: 'VND',
@@ -762,6 +916,10 @@ describe('expenses', () => {
 
     it('returns 404 for an Expense that does not exist, including one already deleted', async () => {
       const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
       const { response: created } = await createExpense(app, token, {
         originalCurrency: 'VND',
       });

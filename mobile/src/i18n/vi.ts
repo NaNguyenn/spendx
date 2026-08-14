@@ -52,6 +52,8 @@ export const vi: Record<TranslationKey, string> = {
   'expenseForm.amountLabel': 'Số tiền',
   'expenseForm.amountHint':
     'Được quy đổi sang {currency} theo tỷ giá hôm nay và giữ nguyên khi lưu',
+  'expenseForm.amountLockedHint':
+    'Không thể thay đổi số tiền và tiền tệ — hãy xóa và ghi lại để sửa',
   'expenseForm.categoryLabel': 'Danh mục',
   'expenseForm.visibilityLabel': 'Chế độ hiển thị',
   'expenseForm.dateLabel': 'Ngày chi tiêu',

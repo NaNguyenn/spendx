@@ -36,8 +36,11 @@ export function createExpense(
 }
 
 /**
- * Edits an owner's Expense; the server re-derives the Converted Amount at
- * the original logging date's Daily Rate (never the edit date's).
+ * Edits an owner's Expense — description, category, visibility, and
+ * expense date only. The Original Amount and its Conversion Snapshot are
+ * immutable after logging (backend ADR-0008): the server rejects
+ * `originalAmount`/`originalCurrency` outright, so the type can't carry
+ * them.
  */
 export function updateExpense(
   token: string,

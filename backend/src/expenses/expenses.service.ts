@@ -10,6 +10,7 @@ import {
   calendarDateInAppTimezone,
   calendarDateToDate,
 } from '../domain/calendar-date';
+import type { SupportedCurrency } from '../domain/currency';
 import { UsersRepository } from '../users/users.repository';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseDto } from './dto/expense.dto';
@@ -27,29 +28,20 @@ export class ExpensesService {
   ) {}
 
   async create(ownerId: string, dto: CreateExpenseDto): Promise<ExpenseDto> {
-    // Read for the owner's Preferred Currency — the Converted Amount's
-    // target. Not an existence check: JwtAuthGuard already resolved
-    // `ownerId` to a live User and 401s when it cannot, so a miss here means
-    // the account vanished mid-request. That is an invariant breach, not a
-    // client error, so it must not surface as a 404 blaming the request.
-    const owner = await this.usersRepository.findById(ownerId);
-    if (!owner) {
-      throw new InternalServerErrorException(
-        `Authenticated user ${ownerId} no longer exists`,
-      );
-    }
+    const preferredCurrency = await this.preferredCurrencyOf(ownerId);
 
     const loggedAt = this.clock.now();
-    // Logged At anchors both the Expense Date default and the Daily Rate —
-    // the same "logging day" in the fixed app timezone, per ADR-0002 and the
-    // issue's Expense Date default (docs/adr/0004).
+    // Logged At anchors both the Expense Date default and the Conversion
+    // Snapshot's Daily Rates — the same "logging day" in the fixed app
+    // timezone, per ADR-0002 and ADR-0008.
     const loggingDate = calendarDateInAppTimezone(loggedAt);
     const expenseDate = dto.expenseDate ?? loggingDate;
 
-    const converted = await this.conversionService.convert({
+    // All-or-nothing (ADR-0008): this throws 503 on any uncovered pair, so
+    // nothing is persisted unless every entry could be derived.
+    const conversions = await this.conversionService.snapshot({
       amount: dto.originalAmount,
       currency: dto.originalCurrency,
-      targetCurrency: owner.preferredCurrency,
       date: loggingDate,
     });
 
@@ -58,89 +50,57 @@ export class ExpensesService {
       description: dto.description,
       originalAmount: dto.originalAmount,
       originalCurrency: dto.originalCurrency,
-      convertedAmount: converted.amount,
-      convertedCurrency: converted.currency,
+      conversions,
       category: dto.category,
       visibility: dto.visibility,
       expenseDate: calendarDateToDate(expenseDate),
       loggedAt,
     });
 
-    return toExpenseDto(expense);
+    return toExpenseDto(expense, preferredCurrency);
   }
 
   /** The caller's own Expenses (every Visibility), newest logged first. */
   async findAllForOwner(ownerId: string): Promise<ExpenseDto[]> {
+    const preferredCurrency = await this.preferredCurrencyOf(ownerId);
     const expenses = await this.expensesRepository.findAllByOwner(ownerId);
-    return expenses.map(toExpenseDto);
+    return expenses.map((expense) => toExpenseDto(expense, preferredCurrency));
   }
 
   /**
-   * Edits an owner's Expense. Whatever the edit touches, the Converted
-   * Amount is re-derived at the *original logging date's* Daily Rate
-   * (ADR-0002) — `loggedAt` is immutable and the edit date never enters the
-   * conversion. Re-deriving unconditionally (not only when amount or
-   * currency changed) is safe because the Daily Rate table is append-only
-   * per (pair, date): the same inputs give the same Converted Amount.
+   * Edits an owner's Expense: description, Category, Visibility, and
+   * Expense Date only. The Original Amount and Original Currency are
+   * immutable after logging (ADR-0008) — the DTO cannot carry them — so the
+   * Conversion Snapshot is never re-derived and no edit ever touches a
+   * Daily Rate.
    */
   async update(
     ownerId: string,
     expenseId: string,
     dto: UpdateExpenseDto,
   ): Promise<ExpenseDto> {
-    // A stranger's Expense and a nonexistent one are deliberately the same
-    // 404 (see findByIdForOwner) — a probe learns nothing about existence.
-    const expense = await this.expensesRepository.findByIdForOwner(
-      expenseId,
-      ownerId,
-    );
-    if (!expense) {
-      throw new NotFoundException('Expense not found');
-    }
+    const preferredCurrency = await this.preferredCurrencyOf(ownerId);
 
-    // Same invariant-breach reasoning as create's owner lookup.
-    const owner = await this.usersRepository.findById(ownerId);
-    if (!owner) {
-      throw new InternalServerErrorException(
-        `Authenticated user ${ownerId} no longer exists`,
-      );
-    }
-
-    const originalAmount =
-      dto.originalAmount ?? expense.originalAmount.toFixed(4);
-    const originalCurrency = dto.originalCurrency ?? expense.originalCurrency;
-
-    const converted = await this.conversionService.convert({
-      amount: originalAmount,
-      currency: originalCurrency,
-      targetCurrency: owner.preferredCurrency,
-      date: calendarDateInAppTimezone(expense.loggedAt),
-    });
-
-    // Owner-scoped, like the read above: if the row vanished between the
-    // two queries (a concurrent delete), this is `null` and the same 404 —
-    // never a Prisma error surfacing as a 500.
+    // Owner-scoped in the query itself: a stranger's Expense and a
+    // nonexistent one are deliberately the same 404 — a probe learns
+    // nothing about existence.
     const updated = await this.expensesRepository.updateForOwner(
       expenseId,
       ownerId,
       {
-        description: dto.description ?? expense.description,
-        originalAmount,
-        originalCurrency,
-        convertedAmount: converted.amount,
-        convertedCurrency: converted.currency,
-        category: dto.category ?? expense.category,
-        visibility: dto.visibility ?? expense.visibility,
+        description: dto.description,
+        category: dto.category,
+        visibility: dto.visibility,
         expenseDate: dto.expenseDate
           ? calendarDateToDate(dto.expenseDate)
-          : expense.expenseDate,
+          : undefined,
       },
     );
     if (!updated) {
       throw new NotFoundException('Expense not found');
     }
 
-    return toExpenseDto(updated);
+    return toExpenseDto(updated, preferredCurrency);
   }
 
   /** Deletes an owner's Expense outright; 404s exactly like {@link update}. */
@@ -152,5 +112,25 @@ export class ExpensesService {
     if (!deleted) {
       throw new NotFoundException('Expense not found');
     }
+  }
+
+  /**
+   * The owner's Preferred Currency — which Conversion Snapshot entry their
+   * responses project (ADR-0008). Not an existence check: JwtAuthGuard
+   * already resolved `ownerId` to a live User and 401s when it cannot, so a
+   * miss here means the account vanished mid-request. That is an invariant
+   * breach, not a client error, so it must not surface as a 404 blaming the
+   * request.
+   */
+  private async preferredCurrencyOf(
+    ownerId: string,
+  ): Promise<SupportedCurrency> {
+    const owner = await this.usersRepository.findById(ownerId);
+    if (!owner) {
+      throw new InternalServerErrorException(
+        `Authenticated user ${ownerId} no longer exists`,
+      );
+    }
+    return owner.preferredCurrency;
   }
 }

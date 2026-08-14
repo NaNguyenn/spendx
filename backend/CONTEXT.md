@@ -18,10 +18,14 @@ The user-settable calendar date an Expense belongs to (defaults to the logging d
 _Avoid_: Spend date, transaction date
 
 **Original Amount**:
-The amount and currency of an Expense exactly as the User entered it. Never altered by conversion.
+The amount and currency of an Expense exactly as the User entered it. Immutable after logging — correcting it means deleting the Expense and logging a new one.
+
+**Conversion Snapshot**:
+An Expense's Original Amount expressed in every Supported Currency, each value derived at the Daily Rate of the logging date, then frozen. Created once when the Expense is logged; never recomputed.
+_Avoid_: Conversion matrix, exchange table
 
 **Converted Amount**:
-The Original Amount converted into the owner's Preferred Currency at the Daily Rate of the logging date, then frozen. Recomputed (at original-date rates) only when the owner changes Preferred Currency. Feeds the owner's summaries, statistics, and leaderboard totals.
+The Conversion Snapshot's entry for a given currency — a reader sees the entry for their own Preferred Currency. Feeds every summary, statistic, and leaderboard total, for owners and Friends alike.
 _Avoid_: Normalized amount, base amount
 
 **Preferred Currency**:
@@ -50,7 +54,7 @@ _Avoid_: Privacy level, audience
 The sum of a User's Friend-only and Public expenses for a period — the only total Friends ever see. A User's leaderboard row shows Shareable Spend for every viewer, including the owner.
 
 **Leaderboard**:
-The ranking of a User and their Friends by total Shareable Spend (all Categories, highest first) within a Period, expressed in the viewer's Preferred Currency (converted at today's Daily Rate).
+The ranking of a User and their Friends by total Shareable Spend (all Categories, highest first) within a Period, expressed in the viewer's Preferred Currency (the sum of the frozen Converted Amounts in that currency). Viewers with different Preferred Currencies may see different orderings.
 
 **Period**:
 The window a Leaderboard covers: an ISO calendar week (default) or a calendar month, with boundaries computed in the fixed app timezone.

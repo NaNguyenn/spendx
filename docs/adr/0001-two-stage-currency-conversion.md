@@ -1,5 +1,7 @@
 # Two-stage currency conversion for multi-currency expenses
 
+> **Status**: partially superseded by [ADR-0008](./0008-conversion-snapshot-in-all-currencies.md) — stage (2) (today's-rate viewer conversion) and the Preferred-Currency-change recompute are replaced by the all-currency Conversion Snapshot; the log-date-frozen principle of stage (1) stands.
+
 Expenses may be logged in any currency, but summaries, statistics, and the friends leaderboard need a single unit. We convert twice: (1) at logging time, the Original Amount is converted into the owner's Preferred Currency at that day's Daily Rate and **frozen** as the Converted Amount — the source of truth for all of the owner's own aggregates; (2) at view time, the friends leaderboard converts each friend's total (already in that friend's Preferred Currency) into the viewer's Preferred Currency at **today's** rate.
 
 ## Considered Options

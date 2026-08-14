@@ -78,6 +78,13 @@ interface ExpenseFormSheetProps {
   title: string;
   submitLabel: string;
   initial?: ExpenseFormInitialValues;
+  /**
+   * True on the edit sheet: the Original Amount is immutable after logging
+   * (backend ADR-0008), so the amount input and currency picker render
+   * inert. Submit still reports both values — they're the stored ones —
+   * and the edit screen simply doesn't send them.
+   */
+  amountLocked?: boolean;
   /** Thrown errors are rendered via `getErrorMessage`; resolve = the screen closes itself. */
   onSubmit: (values: ExpenseFormSubmitValues) => Promise<void>;
   /** Rendered under the submit button — the edit sheet's delete action. */
@@ -100,6 +107,7 @@ export function ExpenseFormSheet({
   title,
   submitLabel,
   initial,
+  amountLocked = false,
   onSubmit,
   footer,
 }: ExpenseFormSheetProps) {
@@ -220,6 +228,7 @@ export function ExpenseFormSheet({
             currency={currency}
             onCurrencyChange={setCurrency}
             targetCurrency={user.preferredCurrency}
+            locked={amountLocked}
             error={fieldErrors.amount ? t(fieldErrors.amount) : undefined}
           />
 

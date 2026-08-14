@@ -254,13 +254,13 @@ export interface components {
       id: string;
       description: string;
       /**
-       * @description The Original Amount, exactly as entered, as a fixed-scale decimal string (4 decimal places). Never a JSON number.
+       * @description The Original Amount, exactly as entered and immutable after logging (ADR-0008), as a fixed-scale decimal string (4 decimal places). Never a JSON number.
        * @example 45000.0000
        */
       originalAmount: string;
       originalCurrency: components['schemas']['SupportedCurrency'];
       /**
-       * @description The Converted Amount: the Original Amount converted into the owner's Preferred Currency at the logging date's Daily Rate, and frozen. A fixed-scale decimal string (4 decimal places).
+       * @description The Converted Amount: the Conversion Snapshot's entry for the reader's Preferred Currency — derived at the logging date's Daily Rate and frozen (ADR-0008). A fixed-scale decimal string (4 decimal places).
        * @example 1.9565
        */
       convertedAmount: string;
@@ -278,12 +278,6 @@ export interface components {
     UpdateExpenseDto: {
       /** @example Coffee with a friend */
       description?: string;
-      /**
-       * @description The Original Amount, exactly as entered: a positive decimal string with at most 4 decimal places. Never a JSON number.
-       * @example 45000.0000
-       */
-      originalAmount?: string;
-      originalCurrency?: components['schemas']['SupportedCurrency'];
       category?: components['schemas']['Category'];
       visibility?: components['schemas']['Visibility'];
       /**

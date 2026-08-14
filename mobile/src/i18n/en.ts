@@ -64,6 +64,8 @@ export const en = {
   // session-context.tsx's `user.preferredCurrency`.
   'expenseForm.amountHint':
     'Converted to {currency} at today’s rate and frozen on save',
+  'expenseForm.amountLockedHint':
+    'Amount and currency can’t be changed — delete and log again to fix them',
   'expenseForm.categoryLabel': 'Category',
   'expenseForm.visibilityLabel': 'Visibility',
   'expenseForm.dateLabel': 'Expense date',

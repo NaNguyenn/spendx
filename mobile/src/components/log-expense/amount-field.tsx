@@ -23,6 +23,12 @@ interface AmountFieldProps {
    * value only when the user hasn't touched the picker.
    */
   targetCurrency: SupportedCurrency;
+  /**
+   * True on the edit form: the Original Amount is immutable after logging
+   * (backend ADR-0008), so the input and the currency picker are inert and
+   * the hint explains the delete-and-relog escape hatch instead.
+   */
+  locked?: boolean;
   error?: string;
 }
 
@@ -44,6 +50,7 @@ export function AmountField({
   currency,
   onCurrencyChange,
   targetCurrency,
+  locked = false,
   error,
 }: AmountFieldProps) {
   const theme = useTheme();
@@ -73,11 +80,15 @@ export function AmountField({
           keyboardType="decimal-pad"
           placeholder="0"
           placeholderTextColor={theme.textTertiary}
-          style={[styles.input, { color: theme.text }]}
+          editable={!locked}
+          style={[
+            styles.input,
+            { color: locked ? theme.textTertiary : theme.text },
+          ]}
         />
         <CurrencyPill
           currency={currency}
-          onPress={() => setIsPickerOpen(true)}
+          onPress={locked ? undefined : () => setIsPickerOpen(true)}
         />
       </View>
       {error ? (
@@ -86,7 +97,9 @@ export function AmountField({
         </ThemedText>
       ) : (
         <ThemedText themeColor="textTertiary" style={styles.hint}>
-          {t('expenseForm.amountHint', { currency: targetCurrency })}
+          {locked
+            ? t('expenseForm.amountLockedHint')
+            : t('expenseForm.amountHint', { currency: targetCurrency })}
         </ThemedText>
       )}
 

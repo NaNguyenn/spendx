@@ -100,37 +100,52 @@ model User {
 }
 
 /// A single spending record logged by a User (see backend/CONTEXT.md —
-/// Expense). See docs/adr/0001 and 0002 for the two-stage conversion model
-/// this schema implements.
+/// Expense). See docs/adr/0002 and 0008 for the conversion model this
+/// schema implements.
 ///
 /// `originalAmount`/`originalCurrency` are the Original Amount exactly as
-/// entered — never altered. `convertedAmount`/`convertedCurrency` are the
-/// Converted Amount: the Original Amount converted into the owner's
-/// Preferred Currency at the Daily Rate of `loggedAt`'s calendar date, then
-/// frozen (recomputed only when the owner changes Preferred Currency — a
-/// later ticket). `loggedAt` anchors the rate and is immutable; `expenseDate`
-/// drives grouping only and never affects conversion (ADR-0002).
+/// entered — immutable after logging (ADR-0008): edits touch only
+/// description, category, visibility, and `expenseDate`. `conversions` is
+/// the Conversion Snapshot; `loggedAt` anchors its rates and is immutable;
+/// `expenseDate` drives grouping only and never affects conversion
+/// (ADR-0002).
 ///
 /// Money columns are Decimal(20,4): up to 16 integer digits and 4 decimal
 /// places, generous enough for VND-scale amounts without ever being a Float.
 model Expense {
-  id                String            @id @default(uuid(7))
-  ownerId           String
-  owner             User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  description       String
-  originalAmount    Decimal           @db.Decimal(20, 4)
-  originalCurrency  SupportedCurrency
-  convertedAmount   Decimal           @db.Decimal(20, 4)
-  convertedCurrency SupportedCurrency
-  category          Category
-  visibility        Visibility
-  expenseDate       DateTime          @db.Date
-  loggedAt          DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id               String            @id @default(uuid(7))
+  ownerId          String
+  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  description      String
+  originalAmount   Decimal           @db.Decimal(20, 4)
+  originalCurrency SupportedCurrency
+  category         Category
+  visibility       Visibility
+  expenseDate      DateTime          @db.Date
+  loggedAt         DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  conversions ExpenseConversion[]
 
   // Backs "list the owner's own expenses, newest first" (GET /expenses).
   @@index([ownerId, loggedAt])
   @@map("expenses")
+}
+
+/// One entry of an Expense's Conversion Snapshot (see backend/CONTEXT.md and
+/// ADR-0008): the Original Amount in `currency`, derived at the Daily Rate
+/// of the logging date and frozen. Written all-or-nothing with the Expense —
+/// every Supported Currency has a row, always — and never updated: the
+/// Original Amount is immutable, so the snapshot is write-once and dies with
+/// its Expense.
+model ExpenseConversion {
+  expenseId String
+  expense   Expense           @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  currency  SupportedCurrency
+  amount    Decimal           @db.Decimal(20, 4)
+
+  @@id([expenseId, currency])
+  @@map("expense_conversions")
 }
 
 /// The exchange rate for a currency pair on a calendar date (see

@@ -1,25 +1,45 @@
 import { Injectable } from '@nestjs/common';
+import type { ConversionSnapshotEntry } from '../daily-rates/conversion.service';
 import type { Category } from '../domain/category';
 import type { SupportedCurrency } from '../domain/currency';
 import type { Visibility } from '../domain/visibility';
-import { Prisma, type Expense } from '../generated/prisma/client';
+import {
+  Prisma,
+  type Expense,
+  type ExpenseConversion,
+} from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+
+/** An Expense row with its full Conversion Snapshot — what every read returns. */
+export type ExpenseWithConversions = Expense & {
+  conversions: ExpenseConversion[];
+};
 
 export interface CreateExpenseData {
   ownerId: string;
   description: string;
   originalAmount: string;
   originalCurrency: SupportedCurrency;
-  convertedAmount: Prisma.Decimal;
-  convertedCurrency: SupportedCurrency;
+  /** The full Conversion Snapshot — one entry per Supported Currency. */
+  conversions: ConversionSnapshotEntry[];
   category: Category;
   visibility: Visibility;
   expenseDate: Date;
   loggedAt: Date;
 }
 
-/** Everything an edit may change; `ownerId` and `loggedAt` never move. */
-export type UpdateExpenseData = Omit<CreateExpenseData, 'ownerId' | 'loggedAt'>;
+/**
+ * Everything an edit may change — nothing else. The Original Amount and
+ * Original Currency are immutable after logging (ADR-0008), and with them
+ * the Conversion Snapshot; `ownerId` and `loggedAt` never move. An
+ * `undefined` field means "unchanged", which Prisma honors by omission.
+ */
+export interface UpdateExpenseData {
+  description?: string;
+  category?: Category;
+  visibility?: Visibility;
+  expenseDate?: Date;
+}
 
 /**
  * All persistence for the Expense model. Nothing above this class knows
@@ -29,42 +49,46 @@ export type UpdateExpenseData = Omit<CreateExpenseData, 'ownerId' | 'loggedAt'>;
 export class ExpensesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: CreateExpenseData): Promise<Expense> {
-    return this.prisma.expense.create({ data });
-  }
-
-  /** The owner's own Expenses (every Visibility), newest logged first. */
-  findAllByOwner(ownerId: string): Promise<Expense[]> {
-    return this.prisma.expense.findMany({
-      where: { ownerId },
-      orderBy: { loggedAt: 'desc' },
+  /**
+   * Persists the Expense and its Conversion Snapshot as one nested create —
+   * a single transaction, so the all-or-nothing rule (ADR-0008) holds even
+   * against a crash between the two tables.
+   */
+  create({
+    conversions,
+    ...data
+  }: CreateExpenseData): Promise<ExpenseWithConversions> {
+    return this.prisma.expense.create({
+      data: { ...data, conversions: { create: conversions } },
+      include: { conversions: true },
     });
   }
 
-  /**
-   * The Expense only if `ownerId` owns it. A miss and a stranger's probe
-   * are the same `null` here, so callers can't accidentally distinguish
-   * them either.
-   */
-  findByIdForOwner(id: string, ownerId: string): Promise<Expense | null> {
-    return this.prisma.expense.findFirst({ where: { id, ownerId } });
+  /** The owner's own Expenses (every Visibility), newest logged first. */
+  findAllByOwner(ownerId: string): Promise<ExpenseWithConversions[]> {
+    return this.prisma.expense.findMany({
+      where: { ownerId },
+      orderBy: { loggedAt: 'desc' },
+      include: { conversions: true },
+    });
   }
 
   /**
    * Updates only if `ownerId` owns the row — ownership enforced inside the
    * one query, symmetric with {@link deleteForOwner}, not delegated to a
-   * prior read. `null` when the row vanished or was never theirs, so a
-   * concurrent delete surfaces as the caller's 404 rather than a 500.
+   * prior read. `null` when the row does not exist or was never theirs, so
+   * a stranger's probe surfaces as the caller's 404 rather than a 500.
    */
   async updateForOwner(
     id: string,
     ownerId: string,
     data: UpdateExpenseData,
-  ): Promise<Expense | null> {
+  ): Promise<ExpenseWithConversions | null> {
     try {
       return await this.prisma.expense.update({
         where: { id, ownerId },
         data,
+        include: { conversions: true },
       });
     } catch (error) {
       // P2025: no row matched the filter — the not-found this method's

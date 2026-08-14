@@ -26,9 +26,11 @@ import { getErrorMessage } from '@/lib/api-error-message';
  * to call anyway. The enum-typed fields are cast, not validated — the
  * params come from our own `router.push` in app/(app)/index.tsx, and a
  * value the server would reject just comes back as a 400 rendered in the
- * form. Converted Amount is deliberately not passed: the server re-derives
- * it on save (at the original logging date's Daily Rate), and the sheet
- * never shows it.
+ * form. Converted Amount is deliberately not passed: the sheet never shows
+ * it, and it never changes on edit — the Original Amount is immutable after
+ * logging (backend ADR-0008), so its Conversion Snapshot is frozen too. The
+ * amount and currency render locked, and the PATCH body omits them: the
+ * server rejects either field outright.
  */
 export default function EditExpenseScreen() {
   const { token } = useSession();
@@ -94,8 +96,14 @@ export default function EditExpenseScreen() {
         visibility: (params.visibility ?? 'private') as Visibility,
         expenseDate: params.expenseDate,
       }}
-      onSubmit={async (values) => {
-        await updateExpense(token, id, values);
+      amountLocked
+      onSubmit={async ({ description, category, visibility, expenseDate }) => {
+        await updateExpense(token, id, {
+          description,
+          category,
+          visibility,
+          ...(expenseDate ? { expenseDate } : {}),
+        });
         router.back();
       }}
       footer={
