@@ -1,5 +1,5 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { Prisma, PrismaClient } from '../src/generated/prisma/client';
 import { ScryptPasswordHasher } from '../src/auth/scrypt-password-hasher';
 import { calendarDateToDate } from '../src/domain/calendar-date';
 import {
@@ -100,25 +100,53 @@ const YOU_ID = users[0].id;
 const RATE_DATE = '2026-01-01';
 
 /**
- * Development fixture rates — plausible mid-2026 magnitudes, hand-picked and
- * self-consistent (each currency's ->VND rate is its ->USD rate times the
- * USD->VND rate, computed by hand below, never through a JS float), but NOT
- * real market data. Never point anything that cares about accuracy at this
- * table.
+ * Development fixture anchors — plausible mid-2026 magnitudes (1 USD =
+ * 25,000 VND), hand-picked, NOT real market data. Never point anything that
+ * cares about accuracy at this table.
  *
- * `rate` is quote-per-base (see the doc comment on `DailyRate` in
- * schema.prisma): `amount(base) * rate = amount(quote)`. The two Preferred
- * Currencies present in the seeded User set are VND and USD (see `users`
- * above), so `ConversionService` only ever needs a rate quoted in one of
- * those two — every other Supported Currency appears here once as a base
- * against each, for 9 non-identity bases * 2 quote currencies = 18 rows.
- * VND->VND and USD->USD are skipped: `ConversionService.convert()`
- * short-circuits same-currency conversion without a lookup, so those rows
- * would be dead weight.
- *
- * Anchor: 1 USD = 25,000 VND. Every ->VND rate below is that currency's
- * ->USD rate * 25,000, worked out by hand (e.g. EUR: 1.08 * 25,000 =
- * 27,000).
+ * Since ADR-0008 every logged Expense derives a Conversion Snapshot across
+ * ALL Supported Currencies, so the Daily Rate table needs every ordered
+ * pair, not just ->USD/->VND. Rather than hand-writing 90 rows, each
+ * currency gets one USD anchor and `buildDailyRates` derives
+ * rate(A->B) = usd(A) / usd(B) with decimal.js (never a JS float), rounded
+ * to the column's 10 decimal places. Cross-rates are therefore mutually
+ * consistent up to that rounding — e.g. GBP->VND is exactly the old
+ * hand-computed 31,250.
+ */
+const USD_PER_UNIT: Record<SupportedCurrency, string> = {
+  USD: '1',
+  VND: '0.00004',
+  EUR: '1.08',
+  GBP: '1.25',
+  JPY: '0.0065',
+  SGD: '0.75',
+  AUD: '0.65',
+  CAD: '0.72',
+  KRW: '0.00072',
+  THB: '0.0275',
+};
+
+/**
+ * The stored rate for one ordered pair, exactly as `buildDailyRates` writes
+ * it — conversions below must read this (the table's rounded value), not the
+ * raw anchors, to land on the same digits `ConversionService` would.
+ */
+function fixtureRate(
+  base: SupportedCurrency,
+  quote: SupportedCurrency,
+): Prisma.Decimal {
+  return new Prisma.Decimal(USD_PER_UNIT[base])
+    .div(USD_PER_UNIT[quote])
+    .toDecimalPlaces(10);
+}
+
+/**
+ * Every ordered pair of distinct Supported Currencies (90 rows for 10
+ * currencies), quote-per-base (see the doc comment on `DailyRate` in
+ * schema.prisma): `amount(base) * rate = amount(quote)`. Same-currency
+ * pairs are skipped: the Conversion Snapshot's identity entry never does a
+ * lookup (`ConversionService.snapshot()`), so those rows would be dead
+ * weight.
  */
 function buildDailyRates(): Array<{
   id: string;
@@ -129,53 +157,25 @@ function buildDailyRates(): Array<{
 }> {
   const rateDate = calendarDateToDate(RATE_DATE);
   const rows: Array<{
+    id: string;
     baseCurrency: SupportedCurrency;
     quoteCurrency: SupportedCurrency;
+    rateDate: Date;
     rate: string;
-  }> = [
-    // VND <-> USD, the two Preferred Currencies themselves.
-    { baseCurrency: 'USD', quoteCurrency: 'VND', rate: '25000' },
-    { baseCurrency: 'VND', quoteCurrency: 'USD', rate: '0.00004' },
-    // Every other Supported Currency, ->USD and ->VND (= ->USD * 25,000).
-    { baseCurrency: 'EUR', quoteCurrency: 'USD', rate: '1.08' },
-    { baseCurrency: 'EUR', quoteCurrency: 'VND', rate: '27000' },
-    { baseCurrency: 'GBP', quoteCurrency: 'USD', rate: '1.25' },
-    { baseCurrency: 'GBP', quoteCurrency: 'VND', rate: '31250' },
-    { baseCurrency: 'JPY', quoteCurrency: 'USD', rate: '0.0065' },
-    { baseCurrency: 'JPY', quoteCurrency: 'VND', rate: '162.5' },
-    { baseCurrency: 'SGD', quoteCurrency: 'USD', rate: '0.75' },
-    { baseCurrency: 'SGD', quoteCurrency: 'VND', rate: '18750' },
-    { baseCurrency: 'AUD', quoteCurrency: 'USD', rate: '0.65' },
-    { baseCurrency: 'AUD', quoteCurrency: 'VND', rate: '16250' },
-    { baseCurrency: 'CAD', quoteCurrency: 'USD', rate: '0.72' },
-    { baseCurrency: 'CAD', quoteCurrency: 'VND', rate: '18000' },
-    { baseCurrency: 'KRW', quoteCurrency: 'USD', rate: '0.00072' },
-    { baseCurrency: 'KRW', quoteCurrency: 'VND', rate: '18' },
-    { baseCurrency: 'THB', quoteCurrency: 'USD', rate: '0.0275' },
-    { baseCurrency: 'THB', quoteCurrency: 'VND', rate: '687.5' },
-  ];
-
-  // Every Supported Currency other than VND/USD themselves must appear
-  // exactly twice above (->USD and ->VND); a currency added to the domain
-  // list without a fixture here would silently 503 the demo path again.
-  const nonIdentityCurrencies = SUPPORTED_CURRENCIES.filter(
-    (currency) => currency !== 'VND' && currency !== 'USD',
-  );
-  for (const currency of nonIdentityCurrencies) {
-    const pairs = rows.filter((row) => row.baseCurrency === currency);
-    if (pairs.length !== 2) {
-      throw new Error(
-        `Daily rate fixtures are missing coverage for ${currency} — ` +
-          `expected a ->USD and a ->VND row, found ${pairs.length}.`,
-      );
+  }> = [];
+  for (const baseCurrency of SUPPORTED_CURRENCIES) {
+    for (const quoteCurrency of SUPPORTED_CURRENCIES) {
+      if (baseCurrency === quoteCurrency) continue;
+      rows.push({
+        id: `01920000-0000-7000-8100-${String(rows.length + 1).padStart(12, '0')}`,
+        baseCurrency,
+        quoteCurrency,
+        rateDate,
+        rate: fixtureRate(baseCurrency, quoteCurrency).toString(),
+      });
     }
   }
-
-  return rows.map((row, index) => ({
-    id: `01920000-0000-7000-8100-${String(index + 1).padStart(12, '0')}`,
-    rateDate,
-    ...row,
-  }));
+  return rows;
 }
 
 /**
@@ -190,11 +190,13 @@ function buildDailyRates(): Array<{
  * exactly what `ExpensesService.create` would have derived, had these gone
  * through the API instead of being seeded directly.
  *
- * `convertedAmount` is computed by hand at the `RATE_DATE` rate above (the
- * most recent rate at or before every one of these logging dates) so it is
- * exactly what `ConversionService.convert()` would produce:
- * - VND expenses: identity, convertedAmount == originalAmount.
- * - The USD concert ticket: 50.00 USD * 25000 (USD->VND) = 1,250,000.0000 VND.
+ * Each Expense's Conversion Snapshot is derived by `buildConversions` below
+ * from the same stored fixture rates, with the same arithmetic
+ * `ConversionService.snapshot()` uses — identity for the Original Currency,
+ * `originalAmount * rate` rounded to 4 decimal places for the rest — so the
+ * seeded rows are exactly what logging these through the API at RATE_DATE
+ * would have produced (e.g. the USD concert ticket's VND entry: 50.00 *
+ * 25,000 = 1,250,000.0000).
  */
 const expenses = [
   {
@@ -203,8 +205,6 @@ const expenses = [
     description: 'Cà phê với Minh',
     originalAmount: '45000',
     originalCurrency: 'VND' as const,
-    convertedAmount: '45000',
-    convertedCurrency: 'VND' as const,
     category: 'food' as const,
     visibility: 'friend_only' as const,
     expenseDate: calendarDateToDate('2026-01-05'),
@@ -216,8 +216,6 @@ const expenses = [
     description: 'Grab về nhà',
     originalAmount: '65000',
     originalCurrency: 'VND' as const,
-    convertedAmount: '65000',
-    convertedCurrency: 'VND' as const,
     category: 'other' as const,
     visibility: 'private' as const,
     expenseDate: calendarDateToDate('2026-01-05'),
@@ -230,8 +228,6 @@ const expenses = [
     originalAmount: '50.00',
     originalCurrency: 'USD' as const,
     // 50.00 * 25000 (USD->VND @ RATE_DATE) = 1,250,000.0000
-    convertedAmount: '1250000.0000',
-    convertedCurrency: 'VND' as const,
     category: 'leisure' as const,
     visibility: 'public' as const,
     expenseDate: calendarDateToDate('2026-01-06'),
@@ -243,8 +239,6 @@ const expenses = [
     description: 'Cổ phiếu VNM',
     originalAmount: '5000000',
     originalCurrency: 'VND' as const,
-    convertedAmount: '5000000',
-    convertedCurrency: 'VND' as const,
     category: 'investment' as const,
     visibility: 'private' as const,
     expenseDate: calendarDateToDate('2026-01-07'),
@@ -256,8 +250,6 @@ const expenses = [
     description: 'Chợ Bến Thành',
     originalAmount: '220000',
     originalCurrency: 'VND' as const,
-    convertedAmount: '220000',
-    convertedCurrency: 'VND' as const,
     category: 'food' as const,
     visibility: 'public' as const,
     expenseDate: calendarDateToDate('2026-01-08'),
@@ -269,14 +261,38 @@ const expenses = [
     description: 'Tiền nhà tháng 1',
     originalAmount: '8500000',
     originalCurrency: 'VND' as const,
-    convertedAmount: '8500000',
-    convertedCurrency: 'VND' as const,
     category: 'housing' as const,
     visibility: 'friend_only' as const,
     expenseDate: calendarDateToDate('2026-01-09'),
     loggedAt: new Date('2026-01-09T00:00:00.000Z'), // 07:00 ICT
   },
 ];
+
+/**
+ * The Conversion Snapshot rows for every seeded Expense (ADR-0008): one row
+ * per Supported Currency — identity for the Original Currency, otherwise
+ * `originalAmount * fixtureRate` rounded to the money columns' 4 decimal
+ * places, mirroring `ConversionService.snapshot()` digit for digit.
+ */
+function buildConversions(): Array<{
+  expenseId: string;
+  currency: SupportedCurrency;
+  amount: string;
+}> {
+  return expenses.flatMap((expense) =>
+    SUPPORTED_CURRENCIES.map((currency) => ({
+      expenseId: expense.id,
+      currency,
+      amount:
+        currency === expense.originalCurrency
+          ? new Prisma.Decimal(expense.originalAmount).toFixed(4)
+          : fixtureRate(expense.originalCurrency, currency)
+              .mul(expense.originalAmount)
+              .toDecimalPlaces(4)
+              .toFixed(4),
+    })),
+  );
+}
 
 async function main(): Promise<void> {
   const passwordHasher = new ScryptPasswordHasher();
@@ -301,6 +317,15 @@ async function main(): Promise<void> {
     skipDuplicates: true,
   });
 
+  // Separate createMany rather than nested create: expenses above use
+  // skipDuplicates on fixed ids, and the (expenseId, currency) PK gives
+  // these the same idempotency. Seeded after their Expenses so the FK holds.
+  const conversions = buildConversions();
+  const { count: conversionCount } = await prisma.expenseConversion.createMany({
+    data: conversions,
+    skipDuplicates: true,
+  });
+
   console.log(
     `Seeded ${userCount} of ${users.length} users (the rest existed).`,
   );
@@ -309,6 +334,10 @@ async function main(): Promise<void> {
   );
   console.log(
     `Seeded ${expenseCount} of ${expenses.length} expenses (the rest existed).`,
+  );
+  console.log(
+    `Seeded ${conversionCount} of ${conversions.length} conversion snapshot ` +
+      `rows (the rest existed).`,
   );
   console.log(`Every seeded account's password is "${DEV_PASSWORD}".`);
 }
