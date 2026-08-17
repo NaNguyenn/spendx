@@ -21,7 +21,7 @@ import { currencySymbol } from '@/lib/format';
 import { localeDisplayName, type SupportedLocale } from '@/lib/locale';
 
 export default function ProfileScreen() {
-  const { user, signOut, updateLocale, updatePreferredCurrency } = useSession();
+  const { user, signOut, updateMe } = useSession();
   const theme = useTheme();
   const { locale: activeLocale, t } = useTranslation();
 
@@ -47,7 +47,7 @@ export default function ProfileScreen() {
       // A pure read-path switch (ADR-0008): only the User row changes, and
       // every amount-showing screen refetches on focus — so once `user`
       // updates, no other client state needs touching.
-      await updatePreferredCurrency(currency);
+      await updateMe({ preferredCurrency: currency });
     } catch (error) {
       // Same shape as onSelectLocale below: the row still shows the currency
       // the server actually has, and the error says why, not what.
@@ -65,10 +65,10 @@ export default function ProfileScreen() {
     setLocaleError(null);
     setIsUpdatingLocale(true);
     try {
-      await updateLocale(locale);
+      await updateMe({ locale });
     } catch (error) {
       // Don't leave the row showing a Locale the server rejected — `user`
-      // (and so the row's displayed value) never changed, since updateLocale
+      // (and so the row's displayed value) never changed, since updateMe
       // only calls setUser after a successful response.
       // `apiError.network` ("couldn't reach the server") is more actionable
       // than a locale-specific "couldn't update your language" would be — the

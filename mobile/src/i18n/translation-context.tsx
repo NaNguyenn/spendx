@@ -40,7 +40,7 @@ const TranslationContext = createContext<TranslationContextValue | null>(null);
  * what lets the auth screens be localized before there is a session to read.
  *
  * Must render inside SessionProvider; sits above ThemeProvider in the root
- * layout so a Locale change (SessionContext#updateLocale) re-renders every
+ * layout so a Locale change (SessionContext#updateMe) re-renders every
  * translated string in the tree.
  */
 export function TranslationProvider({ children }: PropsWithChildren) {

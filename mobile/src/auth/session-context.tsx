@@ -15,9 +15,7 @@ import {
   type OkJson,
 } from '@/api/client';
 import type { paths } from '@/api/schema';
-import type { SupportedCurrency } from '@/constants/currency';
 import { useStorageState } from '@/hooks/use-storage-state';
-import type { SupportedLocale } from '@/lib/locale';
 
 /**
  * Loads any persisted token at startup, exposes the signed-in user, and
@@ -32,6 +30,7 @@ const SESSION_TOKEN_KEY = 'spendx-session-token';
 
 export type SignUpInput = JsonRequestBody<paths['/auth/sign-up']['post']>;
 export type SignInInput = JsonRequestBody<paths['/auth/sign-in']['post']>;
+export type UpdateMeInput = JsonRequestBody<paths['/users/me']['patch']>;
 export type CurrentUser = OkJson<paths['/users/me']['get']>;
 
 interface SessionContextValue {
@@ -51,21 +50,17 @@ interface SessionContextValue {
   signIn(input: SignInInput): Promise<void>;
   signOut(): void;
   /**
-   * Persists the account's Locale server-side (it drives future emails —
-   * backend/CONTEXT.md's Locale entry) and updates `user`, the single source
-   * of truth TranslationProvider reads its active locale from. Throws on
-   * failure rather than swallowing it, so the caller can show the rejected
-   * change instead of silently keeping a Locale the server didn't accept.
-   */
-  updateLocale(locale: SupportedLocale): Promise<void>;
-  /**
-   * Persists the account's Preferred Currency server-side and updates `user`.
-   * A pure read-path switch (ADR-0008): nothing stored changes besides the
-   * User row, so screens showing amounts only need to refetch — every value
+   * Persists account fields (`PATCH /users/me` — one partial-update route,
+   * so one method mirroring it) and updates `user`. Locale is the single
+   * source of truth TranslationProvider reads its active locale from (and
+   * drives future emails — backend/CONTEXT.md's Locale entry). A Preferred
+   * Currency change is a pure read-path switch (ADR-0008): only the User
+   * row changes, so amount-showing screens just refetch and every value
    * re-projects from its Expense's frozen Conversion Snapshot. Throws on
-   * failure, like updateLocale and for the same reason.
+   * failure rather than swallowing it, so the caller can show the rejected
+   * change instead of silently keeping a value the server didn't accept.
    */
-  updatePreferredCurrency(currency: SupportedCurrency): Promise<void>;
+  updateMe(fields: UpdateMeInput): Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -133,22 +128,11 @@ export function SessionProvider({ children }: PropsWithChildren) {
         setToken(null);
         setUser(null);
       },
-      async updateLocale(locale) {
+      async updateMe(fields) {
         if (!token) {
-          throw new Error('Cannot update locale while signed out');
+          throw new Error('Cannot update account while signed out');
         }
-        const updated = await apiPatch('/users/me', { locale }, { token });
-        setUser(updated);
-      },
-      async updatePreferredCurrency(currency) {
-        if (!token) {
-          throw new Error('Cannot update preferred currency while signed out');
-        }
-        const updated = await apiPatch(
-          '/users/me',
-          { preferredCurrency: currency },
-          { token },
-        );
+        const updated = await apiPatch('/users/me', fields, { token });
         setUser(updated);
       },
     }),
