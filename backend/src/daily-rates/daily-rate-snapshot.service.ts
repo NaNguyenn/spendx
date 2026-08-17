@@ -11,11 +11,11 @@ import { DailyRatesRepository } from './daily-rates.repository';
  * provider and writes them into the Daily Rate table; `ConversionService`
  * reads that table and never touches the provider.
  *
- * Nothing in this ticket schedules this — the once-daily cron job that
- * would call it (against the real provider, once one exists) is a later
- * ticket. Tests call it directly after configuring a fake provider, which is
- * how they "inject fixed rates" through this seam rather than writing rows
- * into the table by hand.
+ * Scheduled once daily (plus a boot-time catch-up) by `DailyRateSnapshotJob`
+ * against whichever provider `DailyRatesModule` wired up. Tests call it
+ * directly after configuring a fake provider, which is how they "inject
+ * fixed rates" through this seam rather than writing rows into the table by
+ * hand.
  */
 @Injectable()
 export class DailyRateSnapshotService {

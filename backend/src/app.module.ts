@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 import {
   AUTH_THROTTLER,
@@ -17,6 +18,8 @@ import { UsersModule } from './users/users.module';
 @Module({
   imports: [
     AppConfigModule,
+    // Drives DailyRateSnapshotJob's daily @Cron (src/daily-rates).
+    ScheduleModule.forRoot(),
     // Two named throttlers per RATE_LIMIT_MAX/AUTH_RATE_LIMIT_MAX (#18).
     // 'default' covers every route; 'auth' covers only the routes marked
     // @AuthRateLimited(), so a controller added later inherits the ordinary

@@ -36,6 +36,20 @@ export class DailyRatesRepository {
   }
 
   /**
+   * How many rows the table holds on `date`. A count rather than an
+   * existence check because a date can legitimately hold a *partial* matrix
+   * — rows written by the dev seed, or by a run predating a currency's
+   * addition — and `DailyRateSnapshotJob.catchUp` must treat such a date as
+   * uncovered (one missing pair blocks all Expense logging with a 503,
+   * ADR-0008) rather than skip it forever.
+   */
+  countRatesOn(date: string): Promise<number> {
+    return this.prisma.dailyRate.count({
+      where: { rateDate: calendarDateToDate(date) },
+    });
+  }
+
+  /**
    * Writes one date's quotes into the table, upserting each pair so a
    * re-run (a retried snapshot job, or a test reseeding a date) overwrites
    * rather than duplicates. Runs as a single transaction — see
