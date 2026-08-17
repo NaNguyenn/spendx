@@ -218,7 +218,8 @@ export interface components {
       createdAt: string;
     };
     UpdateMeDto: {
-      locale: components['schemas']['Locale'];
+      preferredCurrency?: components['schemas']['SupportedCurrency'];
+      locale?: components['schemas']['Locale'];
     };
     PublicUserDto: {
       id: string;

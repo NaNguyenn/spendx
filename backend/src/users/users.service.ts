@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrivateUserDto } from './dto/private-user.dto';
 import { PublicUserDto } from './dto/public-user.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -21,7 +25,11 @@ export class UsersService {
   // The caller reaches here only through JwtAuthGuard, which already
   // resolved `userId` to a live User — no NotFoundException branch needed.
   async updateMe(userId: string, dto: UpdateMeDto): Promise<PrivateUserDto> {
+    if (dto.preferredCurrency === undefined && dto.locale === undefined) {
+      throw new BadRequestException('At least one field must be provided');
+    }
     const user = await this.usersRepository.update(userId, {
+      preferredCurrency: dto.preferredCurrency,
       locale: dto.locale,
     });
     return toPrivateUser(user);

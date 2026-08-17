@@ -27,8 +27,8 @@ export class UsersController {
     return this.usersService.getPrivateProfile(userId);
   }
 
-  // Only Locale today (see UpdateMeDto); this stays the one route Preferred
-  // Currency and Display Name land on later rather than each growing its own.
+  // The one account-update route (see UpdateMeDto) — Display Name lands here
+  // later rather than growing its own.
   @Patch('me')
   @ApiOperation({ summary: "Update the caller's own account" })
   @ApiOkResponse({ type: PrivateUserDto })

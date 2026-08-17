@@ -474,6 +474,13 @@
       "UpdateMeDto": {
         "type": "object",
         "properties": {
+          "preferredCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
           "locale": {
             "allOf": [
               {
@@ -481,8 +488,7 @@
               }
             ]
           }
-        },
-        "required": ["locale"]
+        }
       },
       "PublicUserDto": {
         "type": "object",

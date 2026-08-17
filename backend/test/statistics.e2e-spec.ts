@@ -255,6 +255,44 @@ describe('statistics', () => {
     ).toBe('250000.0000');
   });
 
+  // A Preferred Currency change is a pure read-path switch (ADR-0008): the
+  // whole statistics response re-projects each Expense's frozen snapshot
+  // entry for the new currency — no total ever mixes currencies.
+  it('reads entirely in the new Preferred Currency after a switch, from the frozen snapshot entries', async () => {
+    const token = await signUpForToken('USD');
+    await seedDailyRatesFromBase(app, rateProvider, {
+      baseCurrency: 'USD',
+      date: LOGGING_DATE,
+      rates: { VND: '25000.0000000000' },
+    });
+
+    await createExpense(app, token, {
+      originalAmount: '10.0000',
+      originalCurrency: 'USD',
+      category: 'leisure',
+      expenseDate: LOGGING_DATE,
+    });
+
+    await request(app.getHttpServer())
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preferredCurrency: 'VND' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .get('/expenses/statistics')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    const stats = statisticsBody(response);
+    expect(stats.currency).toBe('VND');
+    expect(stats.week.total).toBe('250000.0000'); // 10 USD * 25,000, frozen
+    expect(stats.month.total).toBe('250000.0000');
+    expect(
+      stats.week.categories.find((c) => c.category === 'leisure')?.total,
+    ).toBe('250000.0000');
+  });
+
   it('recomputes after a date move and a delete: PATCHing an Expense Date across the week boundary shifts its amount between total and previousTotal, and DELETE removes it entirely', async () => {
     const token = await signUpForToken('VND');
     await seedDailyRatesFromBase(app, rateProvider, {

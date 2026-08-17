@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
-import { CurrencyPickerSheet } from '@/components/log-expense/currency-picker-sheet';
+import { CurrencyPickerSheet } from '@/components/currency-picker-sheet';
 import { CurrencyPill } from '@/components/currency-pill';
 import { fieldStyles } from '@/components/form/field-styles';
 import { ThemedText } from '@/components/themed-text';

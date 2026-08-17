@@ -585,13 +585,12 @@ describe('expenses', () => {
     // ADR-0008's payoff: a Preferred Currency change is a pure read-path
     // switch. The same Expense re-projects from its frozen snapshot — the
     // VND entry it got at logging time — with no recompute and no rate
-    // lookup on read. The currency flip is arranged directly on the users
-    // table because no API updates Preferred Currency yet (a later ticket).
+    // lookup on read.
     it("projects the frozen entry for the owner's new Preferred Currency after a switch, without recomputing", async () => {
       const { response: signedUp } = await signUp(app, {
         preferredCurrency: 'USD',
       });
-      const { accessToken: token, user } = authBody(signedUp);
+      const { accessToken: token } = authBody(signedUp);
 
       await seedDailyRatesFromBase(app, rateProvider, {
         baseCurrency: 'GBP',
@@ -611,10 +610,11 @@ describe('expenses', () => {
         rate: '90000.0000000000',
       });
       clock.set(new Date('2026-08-05T10:00:00.000Z'));
-      await testDb().user.update({
-        where: { id: user.id },
-        data: { preferredCurrency: 'VND' },
-      });
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ preferredCurrency: 'VND' })
+        .expect(200);
 
       const response = await request(app.getHttpServer())
         .get('/expenses')
@@ -623,6 +623,73 @@ describe('expenses', () => {
       expect(response.status).toBe(200);
       expect(expenseListBody(response)[0]).toMatchObject({
         convertedAmount: '70000.0000', // 2 GBP * 35,000 — the frozen entry
+        convertedCurrency: 'VND',
+      });
+    });
+
+    // The storage half of the read-path switch: the PATCH writes the User row
+    // and nothing else. Asserted against the tables directly — a knowing
+    // exception to "assert through the API", because "no rows were touched"
+    // is exactly the claim, and the API cannot show it (the snapshot never
+    // crosses the wire, ADR-0008).
+    it('changing the Preferred Currency touches no Expense or Conversion Snapshot row', async () => {
+      const { response: signedUp } = await signUp(app, {
+        preferredCurrency: 'USD',
+      });
+      const { accessToken: token } = authBody(signedUp);
+
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'GBP',
+        date: '2026-08-01',
+        rates: { USD: '1.3500000000', VND: '35000.0000000000' },
+      });
+      await createExpense(app, token, {
+        originalAmount: '2.0000',
+        originalCurrency: 'GBP',
+      });
+
+      const expensesBefore = await testDb().expense.findMany({
+        include: { conversions: true },
+      });
+
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ preferredCurrency: 'VND' })
+        .expect(200);
+
+      const expensesAfter = await testDb().expense.findMany({
+        include: { conversions: true },
+      });
+      expect(expensesAfter).toEqual(expensesBefore);
+    });
+
+    it('projects an Expense logged after the switch into the new Preferred Currency', async () => {
+      const { response: signedUp } = await signUp(app, {
+        preferredCurrency: 'USD',
+      });
+      const { accessToken: token } = authBody(signedUp);
+
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'GBP',
+        date: '2026-08-01',
+        rates: { USD: '1.3500000000', VND: '35000.0000000000' },
+      });
+
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ preferredCurrency: 'VND' })
+        .expect(200);
+
+      const { response: created } = await createExpense(app, token, {
+        originalAmount: '2.0000',
+        originalCurrency: 'GBP',
+      });
+
+      expect(created.status).toBe(201);
+      expect(expenseBody(created)).toMatchObject({
+        convertedAmount: '70000.0000', // 2 GBP * 35,000 at the logging date
         convertedCurrency: 'VND',
       });
     });

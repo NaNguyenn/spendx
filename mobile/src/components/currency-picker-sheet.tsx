@@ -25,11 +25,12 @@ interface CurrencyPickerSheetProps {
 }
 
 /**
- * The Amount Input's currency picker — same bottom-sheet chrome as
- * SelectField's (form/select-field.tsx) and Profile's LocalePickerSheet,
- * kept as its own component for the same reason LocalePickerSheet is: it
- * lists `SUPPORTED_CURRENCIES` specifically rather than a generic option
- * array, and it's the Amount Input's own affordance, not a plain form field's.
+ * The Supported Currency picker, shared by the Amount Input (an Original
+ * Amount's currency) and Profile (Preferred Currency) — same bottom-sheet
+ * chrome as SelectField's (form/select-field.tsx) and Profile's
+ * LocalePickerSheet, kept as its own component for the same reason
+ * LocalePickerSheet is: it lists `SUPPORTED_CURRENCIES` specifically rather
+ * than a generic option array.
  */
 export function CurrencyPickerSheet({
   visible,

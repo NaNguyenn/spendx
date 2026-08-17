@@ -13,10 +13,14 @@ export interface CreateUserData {
   locale: Locale;
 }
 
-// Only Locale today — `PATCH /users/me` grows this interface (Preferred
-// Currency, Display Name) as later tickets add the fields it may update.
+// The fields `PATCH /users/me` may update; an undefined field is left
+// unchanged (Prisma skips undefined keys). Display Name joins when its
+// ticket lands. Changing preferredCurrency writes only this row — reads
+// re-project each Expense's Conversion Snapshot, nothing is recomputed
+// (ADR-0008).
 export interface UpdateUserData {
-  locale: Locale;
+  preferredCurrency?: SupportedCurrency;
+  locale?: Locale;
 }
 
 /**

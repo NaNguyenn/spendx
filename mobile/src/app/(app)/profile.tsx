@@ -5,22 +5,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/auth/session-context';
 import { TAB_BAR_INSET } from '@/components/app-tabs';
 import { FormError } from '@/components/auth/auth-screen';
+import { CurrencyPickerSheet } from '@/components/currency-picker-sheet';
 import { LocalePickerSheet } from '@/components/profile/locale-picker-sheet';
 import {
   ProfileSection,
   type ProfileRowItem,
 } from '@/components/profile/profile-section';
 import { ThemedText } from '@/components/themed-text';
+import type { SupportedCurrency } from '@/constants/currency';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
+import { currencySymbol } from '@/lib/format';
 import { localeDisplayName, type SupportedLocale } from '@/lib/locale';
 
 export default function ProfileScreen() {
-  const { user, signOut, updateLocale } = useSession();
+  const { user, signOut, updateLocale, updatePreferredCurrency } = useSession();
   const theme = useTheme();
-  const { t } = useTranslation();
+  const { locale: activeLocale, t } = useTranslation();
+
+  const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
+  const [isUpdatingCurrency, setIsUpdatingCurrency] = useState(false);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
 
   const [isLocalePickerOpen, setIsLocalePickerOpen] = useState(false);
   const [isUpdatingLocale, setIsUpdatingLocale] = useState(false);
@@ -29,6 +36,27 @@ export default function ProfileScreen() {
   // Stack.Protected only mounts this route while signed in, but the type
   // stays nullable — guard defensively for the moment of sign-out itself.
   if (!user) return null;
+
+  const onSelectCurrency = async (currency: SupportedCurrency) => {
+    setIsCurrencyPickerOpen(false);
+    if (currency === user.preferredCurrency) return;
+
+    setCurrencyError(null);
+    setIsUpdatingCurrency(true);
+    try {
+      // A pure read-path switch (ADR-0008): only the User row changes, and
+      // every amount-showing screen refetches on focus — so once `user`
+      // updates, no other client state needs touching.
+      await updatePreferredCurrency(currency);
+    } catch (error) {
+      // Same shape as onSelectLocale below: the row still shows the currency
+      // the server actually has, and the error says why, not what.
+      const result = getErrorMessage(error);
+      setCurrencyError(result.kind === 'server' ? result.text : t(result.key));
+    } finally {
+      setIsUpdatingCurrency(false);
+    }
+  };
 
   const onSelectLocale = async (locale: SupportedLocale) => {
     setIsLocalePickerOpen(false);
@@ -58,7 +86,13 @@ export default function ProfileScreen() {
       key: 'currency',
       icon: { ios: 'creditcard', android: 'credit_card', web: 'credit_card' },
       label: t('profile.preferredCurrency'),
-      value: user.preferredCurrency,
+      // Code + symbol ("VND ₫"), per the Profile mock's PREFERENCES row.
+      value: `${user.preferredCurrency} ${currencySymbol(
+        user.preferredCurrency,
+        activeLocale,
+      )}`,
+      onPress: () => setIsCurrencyPickerOpen(true),
+      disabled: isUpdatingCurrency,
     },
     {
       key: 'language',
@@ -115,6 +149,7 @@ export default function ProfileScreen() {
           caption={t('profile.preferences')}
           rows={preferencesRows}
         />
+        <FormError message={currencyError} />
         <FormError message={localeError} />
         <ProfileSection caption={t('profile.account')} rows={accountRows} />
 
@@ -133,6 +168,12 @@ export default function ProfileScreen() {
         </Pressable>
       </ScrollView>
 
+      <CurrencyPickerSheet
+        visible={isCurrencyPickerOpen}
+        value={user.preferredCurrency}
+        onSelect={onSelectCurrency}
+        onClose={() => setIsCurrencyPickerOpen(false)}
+      />
       <LocalePickerSheet
         visible={isLocalePickerOpen}
         value={user.locale}

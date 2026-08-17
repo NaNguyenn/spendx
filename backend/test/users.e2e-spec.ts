@@ -133,6 +133,72 @@ describe('users', () => {
       expect(privateUserBody(me).locale).toBe('vi');
     });
 
+    it('changes the Preferred Currency and returns the PrivateUser reflecting it', async () => {
+      const { response } = await signUp(app, { preferredCurrency: 'USD' });
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ preferredCurrency: 'VND' });
+
+      expect(patched.status).toBe(200);
+      expect(privateUserBody(patched).preferredCurrency).toBe('VND');
+
+      // The change persists — a fresh GET agrees with the PATCH response.
+      const me = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(privateUserBody(me).preferredCurrency).toBe('VND');
+    });
+
+    it('changes Preferred Currency and Locale together in one request', async () => {
+      const { response } = await signUp(app, {
+        preferredCurrency: 'USD',
+        locale: 'en',
+      });
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ preferredCurrency: 'EUR', locale: 'vi' });
+
+      expect(patched.status).toBe(200);
+      expect(privateUserBody(patched)).toMatchObject({
+        preferredCurrency: 'EUR',
+        locale: 'vi',
+      });
+    });
+
+    it('rejects an unsupported Preferred Currency', async () => {
+      const { response } = await signUp(app);
+      const token = authBody(response).accessToken;
+
+      // 'usd' is a Supported Currency spelled wrong: currencies are stored
+      // and matched uppercase, so lowercase must not slip through as valid.
+      for (const preferredCurrency of ['XYZ', 'usd']) {
+        const patched = await request(app.getHttpServer())
+          .patch('/users/me')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ preferredCurrency });
+
+        expect(patched.status).toBe(400);
+      }
+    });
+
+    it('rejects a non-string Preferred Currency', async () => {
+      const { response } = await signUp(app);
+      const token = authBody(response).accessToken;
+
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ preferredCurrency: 1 });
+
+      expect(patched.status).toBe(400);
+    });
+
     it('leaves the rest of the account untouched', async () => {
       const { response, body } = await signUp(app, { locale: 'en' });
       const token = authBody(response).accessToken;
@@ -174,7 +240,9 @@ describe('users', () => {
       expect(patched.status).toBe(400);
     });
 
-    it('rejects a missing Locale', async () => {
+    // Every UpdateMeDto field is optional so each may change alone, but a
+    // body with none of them is a caller bug, not a no-op success.
+    it('rejects an empty body', async () => {
       const { response } = await signUp(app);
       const token = authBody(response).accessToken;
 

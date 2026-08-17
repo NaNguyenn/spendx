@@ -15,6 +15,7 @@ import {
   type OkJson,
 } from '@/api/client';
 import type { paths } from '@/api/schema';
+import type { SupportedCurrency } from '@/constants/currency';
 import { useStorageState } from '@/hooks/use-storage-state';
 import type { SupportedLocale } from '@/lib/locale';
 
@@ -57,6 +58,14 @@ interface SessionContextValue {
    * change instead of silently keeping a Locale the server didn't accept.
    */
   updateLocale(locale: SupportedLocale): Promise<void>;
+  /**
+   * Persists the account's Preferred Currency server-side and updates `user`.
+   * A pure read-path switch (ADR-0008): nothing stored changes besides the
+   * User row, so screens showing amounts only need to refetch — every value
+   * re-projects from its Expense's frozen Conversion Snapshot. Throws on
+   * failure, like updateLocale and for the same reason.
+   */
+  updatePreferredCurrency(currency: SupportedCurrency): Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -129,6 +138,17 @@ export function SessionProvider({ children }: PropsWithChildren) {
           throw new Error('Cannot update locale while signed out');
         }
         const updated = await apiPatch('/users/me', { locale }, { token });
+        setUser(updated);
+      },
+      async updatePreferredCurrency(currency) {
+        if (!token) {
+          throw new Error('Cannot update preferred currency while signed out');
+        }
+        const updated = await apiPatch(
+          '/users/me',
+          { preferredCurrency: currency },
+          { token },
+        );
         setUser(updated);
       },
     }),
