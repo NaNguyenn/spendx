@@ -73,14 +73,31 @@ export async function apiGet<P extends PathsWithGet>(
   return request(path as string, { method: 'GET' }, options);
 }
 
+// A schema POST with no `requestBody` (e.g. accept-a-Friend-Request — the
+// route's only input is the `{id}` path param) makes `JsonRequestBody`
+// resolve to `never`, which no runtime value can satisfy. Widening the
+// parameter to `undefined` in exactly that case is what lets a bodyless POST
+// still be called through this one helper instead of a second one.
+type PostBody<P extends PathsWithPost> =
+  JsonRequestBody<paths[P]['post']> extends never
+    ? undefined
+    : JsonRequestBody<paths[P]['post']>;
+
 export async function apiPost<P extends PathsWithPost>(
   path: P,
-  body: JsonRequestBody<paths[P]['post']>,
+  body: PostBody<P>,
   options: RequestOptions = {},
 ): Promise<OkJson<paths[P]['post']>> {
   return request(
     path as string,
-    { method: 'POST', body: JSON.stringify(body) },
+    {
+      method: 'POST',
+      // `JSON.stringify(undefined)` is the JS value `undefined`, which
+      // `fetch` already treats as "no body" — see `request`'s Content-Type
+      // guard below — so a bodyless route sends no body rather than the
+      // literal text "undefined".
+      body: body === undefined ? undefined : JSON.stringify(body),
+    },
     options,
   );
 }

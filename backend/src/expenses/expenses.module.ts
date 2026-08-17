@@ -11,5 +11,9 @@ import { ExpensesService } from './expenses.service';
   imports: [PrismaModule, ClockModule, DailyRatesModule, UsersModule],
   controllers: [ExpensesController],
   providers: [ExpensesService, ExpensesRepository],
+  // ExpensesService only: cross-feature access (the Friends module's
+  // GET /users/:username/expenses) goes through the service, never the
+  // repository — see rules/arch-module-sharing.md.
+  exports: [ExpensesService],
 })
 export class ExpensesModule {}

@@ -96,6 +96,11 @@ model User {
 
   expenses Expense[]
 
+  sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
+  friendshipsAsUserA     Friendship[]    @relation("FriendshipsAsUserA")
+  friendshipsAsUserB     Friendship[]    @relation("FriendshipsAsUserB")
+
   @@map("users")
 }
 
@@ -173,4 +178,55 @@ model DailyRate {
 
   @@unique([baseCurrency, quoteCurrency, rateDate])
   @@map("daily_rates")
+}
+
+/// A pending offer of Friendship from one User to another (see
+/// backend/CONTEXT.md — Friend Request). A row exists only while the offer
+/// is pending — there is deliberately no status column: accepting
+/// (FriendRequestsRepository.accept) deletes the row and creates the
+/// matching Friendship in one transaction; declining or cancelling just
+/// deletes it.
+///
+/// `@@unique([senderId, recipientId])` blocks a duplicate in the same
+/// direction; the reverse direction is a business rule the service checks
+/// before creating one (a User pair may have at most one pending request
+/// regardless of who sent it).
+model FriendRequest {
+  id          String @id @default(uuid(7))
+  senderId    String
+  sender      User   @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User   @relation("ReceivedFriendRequests", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([senderId, recipientId])
+  @@map("friend_requests")
+}
+
+/// A mutual, consented relationship between two Users (see
+/// backend/CONTEXT.md — Friendship): both sides see each other's
+/// Friend-only Expenses. Created only by
+/// FriendRequestsRepository.accept — never directly.
+///
+/// `userAId` and `userBId` are canonically ordered (userAId < userBId,
+/// enforced in code — see friends/friend-pair.ts) so each unordered pair of
+/// Users maps to exactly one row regardless of who sent the original Friend
+/// Request, and `@@unique([userAId, userBId])` actually prevents a
+/// duplicate rather than missing the mirrored pair.
+model Friendship {
+  id      String @id @default(uuid(7))
+  userAId String
+  userA   User   @relation("FriendshipsAsUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId String
+  userB   User   @relation("FriendshipsAsUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userAId, userBId])
+  // Backs "list my Friends": a User can be stored as either userA or userB,
+  // so both sides need to resolve back to their Friendships. userAId is
+  // already covered by the unique index above.
+  @@index([userBId])
+  @@map("friendships")
 }

@@ -41,7 +41,36 @@ export const en = {
   // profile.tsx does — the user just opened their own expenses, so *what*
   // failed is already obvious; *why* is the part worth saying.
   'expenses.retry': 'Try again',
+  // Reused as the Leaderboard screen's own subtitle (mobile ticket #11):
+  // honest about what mobile ticket #12 still owes — the Shareable Spend
+  // ranking — while the Friend Requests and Friends surfaces below it are
+  // fully working.
   'leaderboard.comingSoon': 'Friend rankings are on their way.',
+  'leaderboard.retry': 'Try again',
+  'leaderboard.addFriend.title': 'Add a friend',
+  'leaderboard.addFriend.label': 'Username',
+  'leaderboard.addFriend.placeholder': 'minhtran',
+  'leaderboard.addFriend.submit': 'Send friend request',
+  'leaderboard.addFriend.sent': 'Friend request sent.',
+  // {count} is the number of pending requests in that direction.
+  'leaderboard.requests.incomingOverline': 'FRIEND REQUESTS · {count}',
+  'leaderboard.requests.outgoingOverline': 'SENT REQUESTS · {count}',
+  // {username} is the request's other party — the sender for an incoming
+  // request, the recipient for an outgoing one (lib/friend-requests.ts).
+  'leaderboard.request.incomingSubtitle': '@{username} wants to compare',
+  'leaderboard.request.outgoingSubtitle': 'Waiting for @{username} to accept',
+  'leaderboard.request.accept': 'Accept',
+  'leaderboard.request.decline': 'Decline',
+  'leaderboard.request.cancel': 'Cancel request',
+  'leaderboard.friends.overline': 'FRIENDS · {count}',
+  'leaderboard.friends.unfriend': 'Unfriend',
+  'leaderboard.friends.unfriendConfirmTitle': 'Unfriend {name}?',
+  'leaderboard.friends.unfriendConfirmMessage':
+    'They stop seeing your Friend-only expenses, and you stop seeing theirs.',
+  'leaderboard.friends.unfriendConfirm': 'Unfriend',
+  'leaderboard.friends.empty.title': 'No friends yet',
+  'leaderboard.friends.empty.note':
+    'Add a friend by their exact @username above.',
   'feed.comingSoon': 'The public feed is on its way.',
 
   'category.housing': 'Housing',

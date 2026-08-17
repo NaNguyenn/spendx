@@ -3,6 +3,7 @@ import type { ConversionSnapshotEntry } from '../daily-rates/conversion.service'
 import type { Category } from '../domain/category';
 import type { SupportedCurrency } from '../domain/currency';
 import type { Visibility } from '../domain/visibility';
+import { SHAREABLE_VISIBILITIES } from '../domain/visibility';
 import {
   Prisma,
   type Expense,
@@ -81,6 +82,20 @@ export class ExpensesRepository {
   findAllByOwner(ownerId: string): Promise<ExpenseWithConversions[]> {
     return this.prisma.expense.findMany({
       where: { ownerId },
+      orderBy: { loggedAt: 'desc' },
+      include: { conversions: true },
+    });
+  }
+
+  /**
+   * An owner's Shareable Expenses (backend/CONTEXT.md — Shareable Spend):
+   * Friend-only and Public only, never Private. Newest logged first, same
+   * ordering as {@link findAllByOwner} — what GET /users/:username/expenses
+   * (issue #11, src/friends) reads once a Friendship is confirmed.
+   */
+  findShareableByOwner(ownerId: string): Promise<ExpenseWithConversions[]> {
+    return this.prisma.expense.findMany({
+      where: { ownerId, visibility: { in: [...SHAREABLE_VISIBILITIES] } },
       orderBy: { loggedAt: 'desc' },
       include: { conversions: true },
     });

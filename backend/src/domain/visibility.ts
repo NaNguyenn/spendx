@@ -18,6 +18,17 @@ export const VISIBILITIES = [
 
 export type Visibility = (typeof VISIBILITIES)[number];
 
+/**
+ * Friend-only and Public — never Private (see backend/CONTEXT.md —
+ * Shareable Spend: "the sum of a User's Friend-only and Public expenses").
+ * What GET /users/:username/expenses (issue #11) reads and what personal
+ * statistics' Shareable-only views would filter to.
+ */
+export const SHAREABLE_VISIBILITIES = [
+  'friend_only',
+  'public',
+] as const satisfies readonly Visibility[];
+
 /** Compiles only while `T` is `never`, and names `T` in the error when it is not. */
 type AssertNone<T extends never> = T;
 

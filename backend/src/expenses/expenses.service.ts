@@ -81,6 +81,26 @@ export class ExpensesService {
   }
 
   /**
+   * An owner's Shareable Expenses, projected in `readerId`'s Preferred
+   * Currency (backend/CONTEXT.md — Converted Amount: "a reader sees the
+   * entry for their own Preferred Currency") — the read path
+   * GET /users/:username/expenses (issue #11, src/friends) calls so the
+   * Conversion Snapshot projection lives in exactly one place
+   * (expense-view.ts). Authorization — that `readerId` is actually a
+   * Friend of `ownerId` — is the Friends module's job, not this one's: by
+   * the time this is called the caller is already known to be entitled.
+   */
+  async findShareableForOwner(
+    ownerId: string,
+    readerId: string,
+  ): Promise<ExpenseDto[]> {
+    const preferredCurrency = await this.preferredCurrencyOf(readerId);
+    const expenses =
+      await this.expensesRepository.findShareableByOwner(ownerId);
+    return expenses.map((expense) => toExpenseDto(expense, preferredCurrency));
+  }
+
+  /**
    * Edits an owner's Expense: description, Category, Visibility, and
    * Expense Date only. The Original Amount and Original Currency are
    * immutable after logging (ADR-0008) — the DTO cannot carry them — so the

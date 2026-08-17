@@ -356,6 +356,247 @@
         "summary": "Delete an Expense",
         "tags": ["expenses"]
       }
+    },
+    "/friend-requests": {
+      "post": {
+        "description": "See backend/CONTEXT.md — Friend Request.",
+        "operationId": "FriendRequestsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFriendRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sending to yourself."
+          },
+          "404": {
+            "description": "Unknown Username."
+          },
+          "409": {
+            "description": "Already Friends, or a Friend Request is already pending between the two, in either direction."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a Friend Request",
+        "tags": ["friends"]
+      },
+      "get": {
+        "description": "Both directions, each newest first.",
+        "operationId": "FriendRequestsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequestsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's pending Friend Requests",
+        "tags": ["friends"]
+      }
+    },
+    "/friend-requests/{id}/accept": {
+      "post": {
+        "description": "Recipient only. Creates the Friendship.",
+        "operationId": "FriendRequestsController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicUserDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such Friend Request, or the caller is not its recipient."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Accept a Friend Request",
+        "tags": ["friends"]
+      }
+    },
+    "/friend-requests/{id}": {
+      "delete": {
+        "description": "The recipient declines or the sender cancels — the same endpoint, role checked.",
+        "operationId": "FriendRequestsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "404": {
+            "description": "No such Friend Request, or the caller is neither party."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decline or cancel a Friend Request",
+        "tags": ["friends"]
+      }
+    },
+    "/friends": {
+      "get": {
+        "description": "Ordered by Username. See backend/CONTEXT.md — Friendship.",
+        "operationId": "FriendshipsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUserDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's Friends",
+        "tags": ["friends"]
+      }
+    },
+    "/friends/{username}": {
+      "delete": {
+        "operationId": "FriendshipsController_remove",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unfriended."
+          },
+          "404": {
+            "description": "No such Friendship."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unfriend a User",
+        "tags": ["friends"]
+      }
+    },
+    "/users/{username}/expenses": {
+      "get": {
+        "description": "Friend-only and Public Expenses only, never Private — newest logged first, converted into the caller's own Preferred Currency. Requires an existing Friendship with the owner.",
+        "operationId": "UserExpensesController_findAll",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpenseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not Friends with this User (including a declined/cancelled Friend Request, an unfriended former Friend, or the caller's own Username)."
+          },
+          "404": {
+            "description": "Unknown Username."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A Friend's Shareable Expenses",
+        "tags": ["friends"]
+      }
     }
   },
   "info": {
@@ -809,6 +1050,56 @@
             "description": "The Expense Date (YYYY-MM-DD). Defaults to the logging day in the fixed app timezone (Asia/Ho_Chi_Minh) when omitted. Backdating is allowed; this never affects the Converted Amount (ADR-0002)."
           }
         }
+      },
+      "CreateFriendRequestDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "minhtran",
+            "description": "The recipient's Username — exact match only, same as GET /users/:username (see backend/CONTEXT.md — Username)."
+          }
+        },
+        "required": ["username"]
+      },
+      "FriendRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/PublicUserDto"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/PublicUserDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601"
+          }
+        },
+        "required": ["id", "sender", "recipient", "createdAt"]
+      },
+      "FriendRequestsDto": {
+        "type": "object",
+        "properties": {
+          "incoming": {
+            "description": "Requests sent to the caller, newest first.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FriendRequestDto"
+            }
+          },
+          "outgoing": {
+            "description": "Requests the caller sent, newest first.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FriendRequestDto"
+            }
+          }
+        },
+        "required": ["incoming", "outgoing"]
       }
     }
   }

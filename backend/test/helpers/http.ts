@@ -34,6 +34,30 @@ export function publicUserBody(response: Response): PublicUserBody {
   return response.body as PublicUserBody;
 }
 
+export function publicUserListBody(response: Response): PublicUserBody[] {
+  return response.body as PublicUserBody[];
+}
+
+export interface FriendRequestBody {
+  id: string;
+  sender: PublicUserBody;
+  recipient: PublicUserBody;
+  createdAt: string;
+}
+
+export function friendRequestBody(response: Response): FriendRequestBody {
+  return response.body as FriendRequestBody;
+}
+
+export interface FriendRequestsBody {
+  incoming: FriendRequestBody[];
+  outgoing: FriendRequestBody[];
+}
+
+export function friendRequestsBody(response: Response): FriendRequestsBody {
+  return response.body as FriendRequestsBody;
+}
+
 export type PrivateUserBody = AuthResponseBody['user'];
 
 export function privateUserBody(response: Response): PrivateUserBody {
