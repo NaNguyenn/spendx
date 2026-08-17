@@ -137,6 +137,11 @@ model Expense {
   // Backs personal statistics (GET /expenses/statistics, issue #7), which
   // groups by Expense Date, never Logged At.
   @@index([ownerId, expenseDate])
+  // Backs the Feed (GET /feed, issue #13): every Public Expense, newest
+  // first by Logged At, keyset-paginated on (loggedAt, id). visibility
+  // leads so the index only ever scans Public rows; loggedAt then id
+  // matches ORDER BY and the cursor predicate exactly.
+  @@index([visibility, loggedAt, id])
   @@map("expenses")
 }
 

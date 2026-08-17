@@ -666,6 +666,57 @@
         "summary": "The Leaderboard: the caller and every Friend by Shareable Spend",
         "tags": ["leaderboard"]
       }
+    },
+    "/feed": {
+      "get": {
+        "description": "Every Public Expense app-wide — including the caller's own — newest first by Logged At, each converted into the caller's own Preferred Currency via its frozen Conversion Snapshot (ADR-0008). Friend-only and Private Expenses never appear, regardless of Friendship. Block filtering (backend/CONTEXT.md — Block, issue #15) is not applied here yet — every Public Expense is visible to every caller for now. Keyset-paginated: pass a previous page's `nextCursor` to continue.",
+        "operationId": "FeedController_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque pagination token from a previous page's `nextCursor`. Omit for the first page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Page size, 1-50. Defaults to 20.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid `limit`, or a malformed `cursor`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The Feed: every Public Expense app-wide, newest first",
+        "tags": ["feed"]
+      }
     }
   },
   "info": {
@@ -1236,6 +1287,109 @@
           }
         },
         "required": ["period", "start", "end", "currency", "rows"]
+      },
+      "FeedOwnerDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": ["username", "displayName"]
+      },
+      "FeedItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "originalAmount": {
+            "type": "string",
+            "description": "The Original Amount, exactly as entered and immutable after logging (ADR-0008), as a fixed-scale decimal string (4 decimal places). Never a JSON number.",
+            "example": "45000.0000"
+          },
+          "originalCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "convertedAmount": {
+            "type": "string",
+            "description": "The Converted Amount: the Conversion Snapshot's entry for the reader's Preferred Currency — derived at the logging date's Daily Rate and frozen (ADR-0008). A fixed-scale decimal string (4 decimal places).",
+            "example": "1.9565"
+          },
+          "convertedCurrency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ]
+          },
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          },
+          "expenseDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD",
+            "example": "2026-08-01"
+          },
+          "loggedAt": {
+            "type": "string",
+            "description": "ISO 8601 — the immutable Logged At."
+          },
+          "owner": {
+            "$ref": "#/components/schemas/FeedOwnerDto"
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "originalAmount",
+          "originalCurrency",
+          "convertedAmount",
+          "convertedCurrency",
+          "category",
+          "visibility",
+          "expenseDate",
+          "loggedAt",
+          "owner"
+        ]
+      },
+      "FeedPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedItemDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pass as `?cursor=` to fetch the next page; `null` once the Feed is exhausted."
+          }
+        },
+        "required": ["items", "nextCursor"]
       }
     }
   }

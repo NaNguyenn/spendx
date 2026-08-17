@@ -305,6 +305,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/feed': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The Feed: every Public Expense app-wide, newest first
+     * @description Every Public Expense app-wide — including the caller's own — newest first by Logged At, each converted into the caller's own Preferred Currency via its frozen Conversion Snapshot (ADR-0008). Friend-only and Private Expenses never appear, regardless of Friendship. Block filtering (backend/CONTEXT.md — Block, issue #15) is not applied here yet — every Public Expense is visible to every caller for now. Keyset-paginated: pass a previous page's `nextCursor` to continue.
+     */
+    get: operations['FeedController_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -538,6 +558,41 @@ export interface components {
       currency: components['schemas']['SupportedCurrency'];
       /** @description The viewer and every Friend, always all present, sorted by total descending with ties broken by Username ascending. Position is the rank. */
       rows: components['schemas']['LeaderboardRowDto'][];
+    };
+    FeedOwnerDto: {
+      username: string;
+      displayName: string;
+    };
+    FeedItemDto: {
+      id: string;
+      description: string;
+      /**
+       * @description The Original Amount, exactly as entered and immutable after logging (ADR-0008), as a fixed-scale decimal string (4 decimal places). Never a JSON number.
+       * @example 45000.0000
+       */
+      originalAmount: string;
+      originalCurrency: components['schemas']['SupportedCurrency'];
+      /**
+       * @description The Converted Amount: the Conversion Snapshot's entry for the reader's Preferred Currency — derived at the logging date's Daily Rate and frozen (ADR-0008). A fixed-scale decimal string (4 decimal places).
+       * @example 1.9565
+       */
+      convertedAmount: string;
+      convertedCurrency: components['schemas']['SupportedCurrency'];
+      category: components['schemas']['Category'];
+      visibility: components['schemas']['Visibility'];
+      /**
+       * @description YYYY-MM-DD
+       * @example 2026-08-01
+       */
+      expenseDate: string;
+      /** @description ISO 8601 — the immutable Logged At. */
+      loggedAt: string;
+      owner: components['schemas']['FeedOwnerDto'];
+    };
+    FeedPageDto: {
+      items: components['schemas']['FeedItemDto'][];
+      /** @description Pass as `?cursor=` to fetch the next page; `null` once the Feed is exhausted. */
+      nextCursor: string | null;
     };
   };
   responses: never;
@@ -1045,6 +1100,37 @@ export interface operations {
         };
       };
       /** @description Invalid `period` or `anchor`. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FeedController_get: {
+    parameters: {
+      query?: {
+        /** @description Opaque pagination token from a previous page's `nextCursor`. Omit for the first page. */
+        cursor?: string;
+        /** @description Page size, 1-50. Defaults to 20. */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedPageDto'];
+        };
+      };
+      /** @description Invalid `limit`, or a malformed `cursor`. */
       400: {
         headers: {
           [name: string]: unknown;

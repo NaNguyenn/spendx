@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/config.module';
 import type { Env } from './config/env.schema';
 import { ExpensesModule } from './expenses/expenses.module';
+import { FeedModule } from './feed/feed.module';
 import { FriendsModule } from './friends/friends.module';
 import { HealthModule } from './health/health.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
@@ -50,6 +51,7 @@ import { UsersModule } from './users/users.module';
     ExpensesModule,
     FriendsModule,
     LeaderboardModule,
+    FeedModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -27,7 +27,7 @@ const TAB_BAR_HEIGHT = 66;
  * bar, so nothing reserves this automatically the way
  * `contentInsetAdjustmentBehavior` does for NativeTabs — every screen with
  * content that can reach the bottom pads by this, whether it scrolls
- * (Profile) or not (PlaceholderScreen). One number rather than two summands
+ * (Profile) or not. One number rather than two summands
  * callers have to remember to add.
  */
 export const TAB_BAR_INSET = TAB_BAR_HEIGHT + Spacing.sp4;

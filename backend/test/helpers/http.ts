@@ -138,6 +138,24 @@ export function leaderboardBody(response: Response): LeaderboardBody {
   return response.body as LeaderboardBody;
 }
 
+export interface FeedOwnerBody {
+  username: string;
+  displayName: string;
+}
+
+export interface FeedItemBody extends ExpenseBody {
+  owner: FeedOwnerBody;
+}
+
+export interface FeedPageBody {
+  items: FeedItemBody[];
+  nextCursor: string | null;
+}
+
+export function feedPageBody(response: Response): FeedPageBody {
+  return response.body as FeedPageBody;
+}
+
 interface ErrorBody {
   message: string | string[];
 }

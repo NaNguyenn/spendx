@@ -9,6 +9,7 @@ import {
   formatPercent,
   formatPeriodRange,
   formatPeriodRangeWithYear,
+  formatRelativeTime,
   formatShortDate,
 } from './format';
 
@@ -233,6 +234,68 @@ describe('formatPeriodRangeWithYear', () => {
     const end = new Date(2026, 0, 4);
     expect(formatPeriodRangeWithYear(start, end, 'en')).toBe(
       '29 Dec 2025 – 4 Jan 2026',
+    );
+  });
+});
+
+describe('formatRelativeTime', () => {
+  const now = new Date(2026, 7, 9, 20, 20, 0);
+
+  it('reads "now" (en) under a minute old', () => {
+    const loggedAt = new Date(now.getTime() - 30 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe('now');
+  });
+
+  it('reads "Vừa xong" (vi) under a minute old', () => {
+    const loggedAt = new Date(now.getTime() - 30 * 1000);
+    expect(formatRelativeTime(loggedAt, 'vi', now)).toBe('Vừa xong');
+  });
+
+  it('clamps a future timestamp (clock skew) to "now" rather than going negative', () => {
+    const loggedAt = new Date(now.getTime() + 5 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe('now');
+  });
+
+  it('renders whole minutes, per the mock\'s single-letter unit ("m")', () => {
+    const loggedAt = new Date(now.getTime() - 5 * 60 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe('5m');
+  });
+
+  it('rounds down rather than up for a partial minute', () => {
+    const loggedAt = new Date(now.getTime() - 5 * 60 * 1000 - 59 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe('5m');
+  });
+
+  it('renders whole hours, per the mock ("2h")', () => {
+    const loggedAt = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe('2h');
+  });
+
+  it('renders whole days under a week ("3d")', () => {
+    const loggedAt = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe('3d');
+  });
+
+  it('falls back to the short date at a week or older', () => {
+    const loggedAt = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    expect(formatRelativeTime(loggedAt, 'en', now)).toBe(
+      formatShortDate(loggedAt, 'en'),
+    );
+  });
+
+  it('spells vi units out in full (no single-letter shorthand)', () => {
+    const fiveMinutes = new Date(now.getTime() - 5 * 60 * 1000);
+    const twoHours = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const threeDays = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    expect(formatRelativeTime(fiveMinutes, 'vi', now)).toBe('5 phút');
+    expect(formatRelativeTime(twoHours, 'vi', now)).toBe('2 giờ');
+    expect(formatRelativeTime(threeDays, 'vi', now)).toBe('3 ngày');
+  });
+
+  it('falls back to the vi short date at a week or older', () => {
+    const loggedAt = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+    expect(formatRelativeTime(loggedAt, 'vi', now)).toBe(
+      formatShortDate(loggedAt, 'vi'),
     );
   });
 });

@@ -105,7 +105,21 @@ export const en = {
   // (app/friend/[username].tsx) is itself past this ticket's design scope.
   'leaderboard.rankRow.viewExpenses': 'View expenses',
 
-  'feed.comingSoon': 'The public feed is on its way.',
+  // Feed tab (mobile ticket #13). Mirrors the Expenses/Leaderboard header's
+  // title + subtitle anatomy — see designs/spendx-mock.pen's "Screen Header"
+  // (`I4sUjf`), whose "Sub" content is this exact copy.
+  'feed.subtitle': 'Public expenses, everyone',
+  'feed.retry': 'Try again',
+  // "Loading more" footer while the next page is in flight (design's
+  // `O6IgU`, "Loading more").
+  'feed.loadingMore': 'Loading more',
+  // The design system's Empty State component (`aYs21`) demos a "Feed end"
+  // variant with this exact copy (Component library/Spec — Empty states) —
+  // reused here for the zero-items case, since the mock has no separate
+  // frame for a Feed that has never had a Public expense at all, and the
+  // wording ("New public expenses will appear here…") already covers that.
+  'feed.empty.title': "You're all caught up",
+  'feed.empty.note': 'New public expenses will appear here as people log them.',
 
   // The friend drill-down screen (app/friend/[username].tsx, mobile ticket
   // #12): a Friend's Shareable Expenses for the Period a Rank Row was

@@ -218,6 +218,76 @@ export function formatExpenseDateLabel(
     : full;
 }
 
+const RELATIVE_NOW_LABEL: Record<SupportedLocale, string> = {
+  en: 'now',
+  vi: 'Vừa xong',
+};
+
+type RelativeUnit = 'minute' | 'hour' | 'day';
+
+/**
+ * en spells out the mock's own single-letter units ("2h", "3d" — Feed Card
+ * handle line, `Zlao8` in designs/spendx-mock.pen). vi has no established
+ * single-letter shorthand for phút/giờ/ngày the way "h"/"d" read in English
+ * (the same gap `MONTH_ABBREVIATIONS` works around by spelling "thg 8"
+ * instead of a letter), so vi spells the unit word out — a deliberate
+ * divergence from the (English-only) mock, not a gap left unfilled.
+ */
+const RELATIVE_UNIT_SUFFIX: Record<
+  SupportedLocale,
+  Record<RelativeUnit, string>
+> = {
+  en: { minute: 'm', hour: 'h', day: 'd' },
+  vi: { minute: ' phút', hour: ' giờ', day: ' ngày' },
+};
+
+function formatRelativeUnit(
+  value: number,
+  unit: RelativeUnit,
+  locale: SupportedLocale,
+): string {
+  const count = getNumberFormatter(locale).format(value);
+  return `${count}${RELATIVE_UNIT_SUFFIX[locale][unit]}`;
+}
+
+/**
+ * The Feed Card's "@handle · 2h" relative stamp: whole minutes under an
+ * hour, whole hours under a day, whole days under a week, then
+ * `formatShortDate` past that — a months-old Public expense reads "9 Aug",
+ * not "180d". `now` is a caller-supplied argument, same reasoning as
+ * `formatDateTime` (testable without mocking the clock). A `date` after
+ * `now` (clock skew between devices) clamps to "now"/"Vừa xong" rather than
+ * a negative duration.
+ */
+export function formatRelativeTime(
+  date: Date,
+  locale: SupportedLocale,
+  now: Date,
+): string {
+  const diffSeconds = Math.max(
+    0,
+    Math.floor((now.getTime() - date.getTime()) / 1000),
+  );
+  if (diffSeconds < 60) return RELATIVE_NOW_LABEL[locale];
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) {
+    return formatRelativeUnit(diffMinutes, 'minute', locale);
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return formatRelativeUnit(diffHours, 'hour', locale);
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) {
+    return formatRelativeUnit(diffDays, 'day', locale);
+  }
+
+  return formatShortDate(date, locale);
+}
+
 /**
  * A Leaderboard-style period range — "5–11 AUG" (en) vs "5–11 THG 8" (vi)
  * within one month; "29 Jul – 4 Aug" style when it crosses one. Uppercasing

@@ -77,7 +77,12 @@ export const vi: Record<TranslationKey, string> = {
     'Chi tiêu riêng tư không bao giờ được tính ở đây',
   'leaderboard.rankRow.viewExpenses': 'Xem khoản chi',
 
-  'feed.comingSoon': 'Bảng tin công khai sắp ra mắt.',
+  'feed.subtitle': 'Chi tiêu công khai từ mọi người',
+  'feed.retry': 'Thử lại',
+  'feed.loadingMore': 'Đang tải thêm',
+  'feed.empty.title': 'Bạn đã xem hết bảng tin',
+  'feed.empty.note':
+    'Các khoản chi công khai mới sẽ xuất hiện ở đây khi mọi người ghi lại.',
 
   'friendExpenses.subtitle': 'Chi tiêu có thể chia sẻ',
   'friendExpenses.retry': 'Thử lại',
