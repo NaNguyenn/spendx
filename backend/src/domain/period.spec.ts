@@ -1,6 +1,7 @@
 import {
   calendarMonthOf,
   isoWeekOf,
+  periodRangeOf,
   previousCalendarMonthOf,
   previousIsoWeekOf,
 } from './period';
@@ -123,5 +124,19 @@ describe('previousCalendarMonthOf', () => {
       start: '2024-02-01',
       end: '2024-02-29',
     });
+  });
+});
+
+describe('periodRangeOf', () => {
+  it("delegates to isoWeekOf for 'week'", () => {
+    expect(periodRangeOf('week', '2026-08-05')).toEqual(
+      isoWeekOf('2026-08-05'),
+    );
+  });
+
+  it("delegates to calendarMonthOf for 'month'", () => {
+    expect(periodRangeOf('month', '2026-08-05')).toEqual(
+      calendarMonthOf('2026-08-05'),
+    );
   });
 });

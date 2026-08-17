@@ -28,6 +28,11 @@ export const Colors = {
     danger: '#E23D5A',
     dangerSoft: '#FDE6EA',
     warn: '#E08A00',
+    // Rank 1/2/3 badge fills (design system's "Brand & status" swatches) —
+    // the Leaderboard's Rank Row (mobile ticket #12) is their only user.
+    gold: '#E0A413',
+    silver: '#9AA2B4',
+    bronze: '#BE7A45',
     visPrivate: '#5A6070',
     visPrivateSoft: '#E6E8EF',
     visFriends: '#C2820A',
@@ -65,6 +70,9 @@ export const Colors = {
     danger: '#FF6B84',
     dangerSoft: '#40151F',
     warn: '#FFB833',
+    gold: '#FFC94A',
+    silver: '#B9C0D0',
+    bronze: '#D9925B',
     visPrivate: '#98A0B5',
     visPrivateSoft: '#262A34',
     visFriends: '#FFC24D',

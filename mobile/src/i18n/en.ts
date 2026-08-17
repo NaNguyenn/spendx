@@ -16,6 +16,10 @@ export const en = {
   'common.close': 'Close',
   'common.done': 'Done',
   'common.cancel': 'Cancel',
+  // The friend drill-down screen's back chevron (app/friend/[username].tsx)
+  // — a pushed screen rather than a sheet, so "Back" reads truer than
+  // `common.close`'s "dismiss a sheet" framing.
+  'common.back': 'Back',
 
   'tab.expenses': 'Expenses',
   'tab.leaderboard': 'Leaderboard',
@@ -41,11 +45,11 @@ export const en = {
   // profile.tsx does — the user just opened their own expenses, so *what*
   // failed is already obvious; *why* is the part worth saying.
   'expenses.retry': 'Try again',
-  // Reused as the Leaderboard screen's own subtitle (mobile ticket #11):
-  // honest about what mobile ticket #12 still owes — the Shareable Spend
-  // ranking — while the Friend Requests and Friends surfaces below it are
-  // fully working.
-  'leaderboard.comingSoon': 'Friend rankings are on their way.',
+  // The Leaderboard screen's header subtitle (mobile ticket #12) — mirrors
+  // the design's "Friends by Shareable Spend" (`y2fef` in
+  // designs/spendx-mock.pen), same header anatomy as the Expenses tab's own
+  // subtitle + CurrencyPill.
+  'leaderboard.subtitle': 'Friends by Shareable Spend',
   'leaderboard.retry': 'Try again',
   'leaderboard.addFriend.title': 'Add a friend',
   'leaderboard.addFriend.label': 'Username',
@@ -62,7 +66,9 @@ export const en = {
   'leaderboard.request.accept': 'Accept',
   'leaderboard.request.decline': 'Decline',
   'leaderboard.request.cancel': 'Cancel request',
-  'leaderboard.friends.overline': 'FRIENDS · {count}',
+  // The Friends list (design's plain roster) is absorbed into the Ranking
+  // below; these empty-state/unfriend keys are shared with the Ranking
+  // section and the friend drill-down screen (app/friend/[username].tsx).
   'leaderboard.friends.unfriend': 'Unfriend',
   'leaderboard.friends.unfriendConfirmTitle': 'Unfriend {name}?',
   'leaderboard.friends.unfriendConfirmMessage':
@@ -71,7 +77,51 @@ export const en = {
   'leaderboard.friends.empty.title': 'No friends yet',
   'leaderboard.friends.empty.note':
     'Add a friend by their exact @username above.',
+
+  // Period Browser (design component `umxjF`): the centred label's second
+  // line, and the two chevrons' accessible names.
+  'leaderboard.periodBrowser.currentWeek': 'current week',
+  'leaderboard.periodBrowser.pastWeek': 'past week',
+  'leaderboard.periodBrowser.currentMonth': 'current month',
+  'leaderboard.periodBrowser.pastMonth': 'past month',
+  'leaderboard.periodBrowser.previous': 'Previous period',
+  'leaderboard.periodBrowser.next': 'Next period',
+
+  // The Ranking section's overline, above the Rank Rows — "THIS WEEK · 4
+  // FRIENDS" per the mock; {count} is every row but the viewer's own (see
+  // lib/leaderboard.ts's friendCount): a count of Friends, not of rows.
+  // "PAST WEEK/MONTH" deliberately avoids "last" — it labels any browsed
+  // period, not just the immediately previous one.
+  'leaderboard.ranking.overlineCurrentWeek': 'THIS WEEK · {count} FRIENDS',
+  'leaderboard.ranking.overlinePastWeek': 'PAST WEEK · {count} FRIENDS',
+  'leaderboard.ranking.overlineCurrentMonth': 'THIS MONTH · {count} FRIENDS',
+  'leaderboard.ranking.overlinePastMonth': 'PAST MONTH · {count} FRIENDS',
+
+  // Rank Row (design component `bHVHh`, expanded `WuHB2`).
+  'leaderboard.rankRow.viewerMarker': '(you)',
+  'leaderboard.rankRow.shareableCaption': 'shareable',
+  'leaderboard.rankRow.privacyNote': 'Private spending is never counted here',
+  // No mock frame for this one — the friend drill-down screen it opens
+  // (app/friend/[username].tsx) is itself past this ticket's design scope.
+  'leaderboard.rankRow.viewExpenses': 'View expenses',
+
   'feed.comingSoon': 'The public feed is on its way.',
+
+  // The friend drill-down screen (app/friend/[username].tsx, mobile ticket
+  // #12): a Friend's Shareable Expenses for the Period a Rank Row was
+  // expanded for. Undesigned — extrapolated from the Expenses tab's own
+  // empty/retry treatment.
+  'friendExpenses.subtitle': 'Shareable expenses',
+  'friendExpenses.retry': 'Try again',
+  'friendExpenses.empty.title': 'Nothing shareable this period',
+  'friendExpenses.empty.note':
+    'No Friend-only or Public expenses logged in this range.',
+  // 403 — GET /users/{username}/expenses rejects a Username that isn't (or
+  // no longer is) a Friend, including a since-unfriended one.
+  'friendExpenses.notFriends':
+    "You're not friends with this account anymore, so their expenses aren't visible.",
+  // 404 — an unknown Username.
+  'friendExpenses.notFound': 'This account no longer exists.',
 
   'category.housing': 'Housing',
   'category.food': 'Food',

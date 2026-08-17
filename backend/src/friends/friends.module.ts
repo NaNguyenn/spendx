@@ -28,5 +28,9 @@ import { UserExpensesController } from './user-expenses.controller';
     FriendshipsRepository,
     FriendshipsService,
   ],
+  // FriendshipsService only: the Leaderboard module (issue #12) needs a
+  // viewer's Friend list, and reaches it through this exported service,
+  // never FriendshipsRepository directly — see rules/arch-module-sharing.md.
+  exports: [FriendshipsService],
 })
 export class FriendsModule {}

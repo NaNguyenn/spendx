@@ -8,6 +8,7 @@ import {
   formatNumber,
   formatPercent,
   formatPeriodRange,
+  formatPeriodRangeWithYear,
   formatShortDate,
 } from './format';
 
@@ -195,5 +196,43 @@ describe('formatPeriodRange', () => {
     const start = new Date(2026, 6, 29);
     const end = new Date(2026, 7, 4);
     expect(formatPeriodRange(start, end, 'en')).toBe('29 Jul – 4 Aug');
+  });
+});
+
+describe('formatPeriodRangeWithYear', () => {
+  it('renders a same-month range with a spaced dash and the year, per the mock ("5 – 11 Aug 2026")', () => {
+    const start = new Date(2026, 7, 5);
+    const end = new Date(2026, 7, 11);
+    expect(formatPeriodRangeWithYear(start, end, 'en')).toBe('5 – 11 Aug 2026');
+  });
+
+  it('renders the same range in vi', () => {
+    const start = new Date(2026, 7, 5);
+    const end = new Date(2026, 7, 11);
+    expect(formatPeriodRangeWithYear(start, end, 'vi')).toBe(
+      '5 – 11 thg 8 2026',
+    );
+  });
+
+  it('does not uppercase the month, unlike formatPeriodRange', () => {
+    const start = new Date(2026, 7, 5);
+    const end = new Date(2026, 7, 11);
+    expect(formatPeriodRangeWithYear(start, end, 'en')).not.toContain('AUG');
+  });
+
+  it('falls back to two short dates plus the year when the range crosses a month within one year', () => {
+    const start = new Date(2026, 6, 29);
+    const end = new Date(2026, 7, 4);
+    expect(formatPeriodRangeWithYear(start, end, 'en')).toBe(
+      '29 Jul – 4 Aug 2026',
+    );
+  });
+
+  it('falls back to two full dates when the range crosses a year', () => {
+    const start = new Date(2025, 11, 29);
+    const end = new Date(2026, 0, 4);
+    expect(formatPeriodRangeWithYear(start, end, 'en')).toBe(
+      '29 Dec 2025 – 4 Jan 2026',
+    );
   });
 });

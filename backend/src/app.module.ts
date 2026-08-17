@@ -13,6 +13,7 @@ import type { Env } from './config/env.schema';
 import { ExpensesModule } from './expenses/expenses.module';
 import { FriendsModule } from './friends/friends.module';
 import { HealthModule } from './health/health.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
@@ -48,6 +49,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     ExpensesModule,
     FriendsModule,
+    LeaderboardModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

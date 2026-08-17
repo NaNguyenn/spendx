@@ -63,6 +63,13 @@ export interface RequestOptions {
    * concern only.
    */
   params?: Record<string, string>;
+  /**
+   * `?key=value` query string entries — `undefined` values are omitted
+   * rather than sent as the literal text "undefined", so a caller can pass
+   * every optional query param through unconditionally (e.g.
+   * `fetchFriendExpenses`'s `start`/`end`) without an `if` per param.
+   */
+  query?: Record<string, string | undefined>;
   signal?: AbortSignal;
 }
 
@@ -121,18 +128,29 @@ export async function apiDelete<P extends PathsWithDelete>(
   await request(path as string, { method: 'DELETE' }, options);
 }
 
+function buildQueryString(query: RequestOptions['query']): string {
+  if (!query) return '';
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(key, value);
+  }
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
 async function request<T>(
   path: string,
   init: RequestInit,
-  { token, params, signal }: RequestOptions,
+  { token, params, query, signal }: RequestOptions,
 ): Promise<T> {
-  const url = params
+  const substituted = params
     ? Object.entries(params).reduce(
         (acc, [key, value]) =>
           acc.replace(`{${key}}`, encodeURIComponent(value)),
         path,
       )
     : path;
+  const url = `${substituted}${buildQueryString(query)}`;
 
   const response = await fetch(`${API_BASE_URL}${url}`, {
     ...init,

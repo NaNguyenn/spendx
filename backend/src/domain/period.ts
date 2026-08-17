@@ -1,6 +1,15 @@
 import { calendarDateFromDate, calendarDateToDate } from './calendar-date';
 
 /**
+ * The window a Leaderboard covers (backend/CONTEXT.md — Period): an ISO
+ * calendar week (default) or a calendar month, with boundaries computed in
+ * the fixed app timezone (ADR-0004). `GET /leaderboard`'s `period` query
+ * param.
+ */
+export const PERIODS = ['week', 'month'] as const;
+export type Period = (typeof PERIODS)[number];
+
+/**
  * An inclusive range of calendar dates ('YYYY-MM-DD'), as used by
  * `PeriodStatisticsDto` (`GET /expenses/statistics`) and, per
  * backend/CONTEXT.md's Period, the Leaderboard later.
@@ -70,4 +79,13 @@ export function previousCalendarMonthOf(date: string): DateRange {
 
 function firstOfMonth(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}-01`;
+}
+
+/**
+ * The Period of the given kind containing `anchor` — how `GET /leaderboard`
+ * resolves `?period` + `?anchor` (backend/CONTEXT.md — Period: "the window a
+ * Leaderboard covers... this is how past Periods are browsed").
+ */
+export function periodRangeOf(period: Period, anchor: string): DateRange {
+  return period === 'month' ? calendarMonthOf(anchor) : isoWeekOf(anchor);
 }

@@ -12,6 +12,7 @@ export const vi: Record<TranslationKey, string> = {
   'common.close': 'Đóng',
   'common.done': 'Xong',
   'common.cancel': 'Hủy',
+  'common.back': 'Quay lại',
 
   'tab.expenses': 'Chi tiêu',
   'tab.leaderboard': 'Xếp hạng',
@@ -33,7 +34,7 @@ export const vi: Record<TranslationKey, string> = {
   'expenses.empty.note':
     'Nhấn nút ghi chi tiêu bên dưới để thêm khoản đầu tiên.',
   'expenses.retry': 'Thử lại',
-  'leaderboard.comingSoon': 'Bảng xếp hạng bạn bè sắp ra mắt.',
+  'leaderboard.subtitle': 'Chi tiêu có thể chia sẻ của bạn bè',
   'leaderboard.retry': 'Thử lại',
   'leaderboard.addFriend.title': 'Thêm bạn bè',
   'leaderboard.addFriend.label': 'Tên người dùng',
@@ -47,7 +48,6 @@ export const vi: Record<TranslationKey, string> = {
   'leaderboard.request.accept': 'Chấp nhận',
   'leaderboard.request.decline': 'Từ chối',
   'leaderboard.request.cancel': 'Hủy lời mời',
-  'leaderboard.friends.overline': 'BẠN BÈ · {count}',
   'leaderboard.friends.unfriend': 'Hủy kết bạn',
   'leaderboard.friends.unfriendConfirmTitle': 'Hủy kết bạn với {name}?',
   'leaderboard.friends.unfriendConfirmMessage':
@@ -56,7 +56,37 @@ export const vi: Record<TranslationKey, string> = {
   'leaderboard.friends.empty.title': 'Chưa có bạn bè nào',
   'leaderboard.friends.empty.note':
     'Thêm bạn bè bằng đúng @tên người dùng của họ ở trên.',
+
+  'leaderboard.periodBrowser.currentWeek': 'tuần này',
+  // "đã qua", not "trước" — the label covers any browsed past period, and
+  // "tuần trước"/"tháng trước" would read as specifically last week/month.
+  'leaderboard.periodBrowser.pastWeek': 'tuần đã qua',
+  'leaderboard.periodBrowser.currentMonth': 'tháng này',
+  'leaderboard.periodBrowser.pastMonth': 'tháng đã qua',
+  'leaderboard.periodBrowser.previous': 'Kỳ trước',
+  'leaderboard.periodBrowser.next': 'Kỳ sau',
+
+  'leaderboard.ranking.overlineCurrentWeek': 'TUẦN NÀY · {count} BẠN BÈ',
+  'leaderboard.ranking.overlinePastWeek': 'TUẦN ĐÃ QUA · {count} BẠN BÈ',
+  'leaderboard.ranking.overlineCurrentMonth': 'THÁNG NÀY · {count} BẠN BÈ',
+  'leaderboard.ranking.overlinePastMonth': 'THÁNG ĐÃ QUA · {count} BẠN BÈ',
+
+  'leaderboard.rankRow.viewerMarker': '(bạn)',
+  'leaderboard.rankRow.shareableCaption': 'có thể chia sẻ',
+  'leaderboard.rankRow.privacyNote':
+    'Chi tiêu riêng tư không bao giờ được tính ở đây',
+  'leaderboard.rankRow.viewExpenses': 'Xem khoản chi',
+
   'feed.comingSoon': 'Bảng tin công khai sắp ra mắt.',
+
+  'friendExpenses.subtitle': 'Chi tiêu có thể chia sẻ',
+  'friendExpenses.retry': 'Thử lại',
+  'friendExpenses.empty.title': 'Chưa có khoản chi nào có thể chia sẻ',
+  'friendExpenses.empty.note':
+    'Không có khoản chi Chỉ bạn bè hoặc Công khai nào trong khoảng thời gian này.',
+  'friendExpenses.notFriends':
+    'Bạn không còn là bạn bè với tài khoản này, nên không thể thấy khoản chi của họ.',
+  'friendExpenses.notFound': 'Tài khoản này không còn tồn tại.',
 
   'category.housing': 'Nhà ở',
   'category.food': 'Ăn uống',

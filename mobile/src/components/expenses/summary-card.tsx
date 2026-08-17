@@ -2,9 +2,9 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
 
 import type { PeriodStatistics } from '@/api/expenses';
+import { BreakdownRow } from '@/components/statistics/breakdown-row';
 import type { StatisticsPeriod } from '@/components/expenses/period-toggle';
 import { ThemedText } from '@/components/themed-text';
-import { CATEGORY_META } from '@/constants/category';
 import type { SupportedCurrency } from '@/constants/currency';
 import { Radii } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -155,48 +155,6 @@ export function SummaryCard({
   );
 }
 
-interface BreakdownRowProps {
-  category: PeriodStatistics['categories'][number]['category'];
-  total: string;
-  share: number;
-  currency: SupportedCurrency;
-}
-
-/** Design component `gezzC`, "Component — Breakdown Row" (spec `ysVpf`). */
-function BreakdownRow({ category, total, share, currency }: BreakdownRowProps) {
-  const theme = useTheme();
-  const { t, locale } = useTranslation();
-  const meta = CATEGORY_META[category];
-
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowTop}>
-        <View style={styles.rowLeft}>
-          <View style={[styles.dot, { backgroundColor: theme[meta.color] }]} />
-          <ThemedText style={styles.rowName}>{t(meta.labelKey)}</ThemedText>
-          <ThemedText themeColor="textTertiary" style={styles.rowPct}>
-            {formatPercent(share, locale)}
-          </ThemedText>
-        </View>
-        <ThemedText style={styles.rowAmount}>
-          {formatExpenseAmount(total, currency, locale)}
-        </ThemedText>
-      </View>
-      <View style={[styles.track, { backgroundColor: theme.surface3 }]}>
-        <View
-          style={[
-            styles.bar,
-            {
-              backgroundColor: theme[meta.color],
-              width: `${Math.min(share, 1) * 100}%`,
-            },
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radii.lg,
@@ -246,45 +204,5 @@ const styles = StyleSheet.create({
   },
   breakdown: {
     gap: 11,
-  },
-  row: {
-    gap: 7,
-  },
-  rowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  dot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-  },
-  rowName: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  rowPct: {
-    fontSize: 11.5,
-    fontWeight: '600',
-  },
-  rowAmount: {
-    fontSize: 13.5,
-    fontWeight: '700',
-  },
-  track: {
-    height: 8,
-    borderRadius: Radii.full,
-    overflow: 'hidden',
-  },
-  bar: {
-    height: 8,
-    borderRadius: Radii.full,
   },
 });

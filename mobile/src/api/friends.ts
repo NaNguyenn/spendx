@@ -59,27 +59,33 @@ export function removeFriendRequest(token: string, id: string): Promise<void> {
   return apiDelete('/friend-requests/{id}', { token, params: { id } });
 }
 
-/** The caller's Friends, ordered by Username. */
-export function fetchFriends(token: string): Promise<PublicUserDto[]> {
-  return apiGet('/friends', { token });
-}
-
 /** Ends a Friendship (either side may unfriend). */
 export function unfriend(token: string, username: string): Promise<void> {
   return apiDelete('/friends/{username}', { token, params: { username } });
 }
 
+export interface FetchFriendExpensesRange {
+  /** Only Expenses on or after this Expense Date (YYYY-MM-DD), inclusive. */
+  start?: string;
+  /** Only Expenses on or before this Expense Date (YYYY-MM-DD), inclusive. */
+  end?: string;
+}
+
 /**
  * A Friend's Shareable Expenses (Friend-only + Public, never Private),
- * converted into the caller's own Preferred Currency. Exposed here for
- * mobile ticket #12's Leaderboard ranking — no UI calls this yet.
+ * converted into the caller's own Preferred Currency. `range` narrows to a
+ * Period — how the Leaderboard's friend drill-down (mobile ticket #12,
+ * app/friend/[username].tsx) shows only the Period a Rank Row was expanded
+ * for; omitted, every Shareable Expense comes back.
  */
 export function fetchFriendExpenses(
   token: string,
   username: string,
+  range?: FetchFriendExpensesRange,
 ): Promise<ExpenseDto[]> {
   return apiGet('/users/{username}/expenses', {
     token,
     params: { username },
+    query: { start: range?.start, end: range?.end },
   });
 }

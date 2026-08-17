@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { ExpenseDto } from '../expenses/dto/expense.dto';
+import { UserExpensesQueryDto } from './dto/user-expenses-query.dto';
 import { FriendshipsService } from './friendships.service';
 
 // A second controller mounted at 'users' (alongside UsersController in the
@@ -30,7 +31,9 @@ export class UserExpensesController {
     description:
       'Friend-only and Public Expenses only, never Private — newest ' +
       "logged first, converted into the caller's own Preferred Currency. " +
-      'Requires an existing Friendship with the owner.',
+      'Requires an existing Friendship with the owner. Optionally narrowed ' +
+      'to a Period via `start`/`end` (each independent and inclusive, by ' +
+      'Expense Date) — how the Leaderboard drills into a past Period.',
   })
   @ApiOkResponse({ type: ExpenseDto, isArray: true })
   @ApiForbiddenResponse({
@@ -42,7 +45,11 @@ export class UserExpensesController {
   findAll(
     @CurrentUserId() readerId: string,
     @Param('username') username: string,
+    @Query() query: UserExpensesQueryDto,
   ): Promise<ExpenseDto[]> {
-    return this.friendshipsService.getFriendExpenses(readerId, username);
+    return this.friendshipsService.getFriendExpenses(readerId, username, {
+      start: query.start,
+      end: query.end,
+    });
   }
 }

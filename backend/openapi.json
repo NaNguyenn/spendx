@@ -556,7 +556,7 @@
     },
     "/users/{username}/expenses": {
       "get": {
-        "description": "Friend-only and Public Expenses only, never Private — newest logged first, converted into the caller's own Preferred Currency. Requires an existing Friendship with the owner.",
+        "description": "Friend-only and Public Expenses only, never Private — newest logged first, converted into the caller's own Preferred Currency. Requires an existing Friendship with the owner. Optionally narrowed to a Period via `start`/`end` (each independent and inclusive, by Expense Date) — how the Leaderboard drills into a past Period.",
         "operationId": "UserExpensesController_findAll",
         "parameters": [
           {
@@ -564,6 +564,26 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Only Expenses whose Expense Date is on or after this date (YYYY-MM-DD), inclusive. Independent of `end`.",
+            "schema": {
+              "example": "2026-08-03",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Only Expenses whose Expense Date is on or before this date (YYYY-MM-DD), inclusive. Independent of `start`.",
+            "schema": {
+              "example": "2026-08-09",
               "type": "string"
             }
           }
@@ -596,6 +616,55 @@
         ],
         "summary": "A Friend's Shareable Expenses",
         "tags": ["friends"]
+      }
+    },
+    "/leaderboard": {
+      "get": {
+        "description": "Ranks the caller and every one of their Friends by Shareable Spend (Friend-only and Public Expenses, never Private — even the caller's own row) within one Period, in the caller's Preferred Currency. Every Friend appears, zero-filled when they have no matching Expenses (ADR-0003). Defaults to the current ISO week; `anchor` browses any past Period.",
+        "operationId": "LeaderboardController_get",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "The Period to rank. Defaults to the current ISO week.",
+            "schema": {
+              "$ref": "#/components/schemas/Period"
+            }
+          },
+          {
+            "name": "anchor",
+            "required": false,
+            "in": "query",
+            "description": "Any calendar date (YYYY-MM-DD) inside the desired Period — the response covers the ISO week or calendar month containing it, letting a caller browse a past Period. Defaults to today's date in the fixed app timezone (Asia/Ho_Chi_Minh, ADR-0004).",
+            "schema": {
+              "example": "2026-08-05",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid `period` or `anchor`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The Leaderboard: the caller and every Friend by Shareable Spend",
+        "tags": ["leaderboard"]
       }
     }
   },
@@ -1100,6 +1169,73 @@
           }
         },
         "required": ["incoming", "outgoing"]
+      },
+      "Period": {
+        "type": "string",
+        "enum": ["week", "month"]
+      },
+      "LeaderboardRowDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/PublicUserDto"
+          },
+          "isViewer": {
+            "type": "boolean",
+            "description": "True when this row is the requesting viewer themselves."
+          },
+          "total": {
+            "type": "string",
+            "description": "This User's Shareable Spend for the Period, in the viewer's Preferred Currency, as a fixed-scale decimal string (4 decimal places). Never a JSON number. Zero when they have no matching Expenses — every row is always present (ADR-0003).",
+            "example": "450000.0000"
+          },
+          "categories": {
+            "description": "Every Category (backend/CONTEXT.md), including zero totals, sorted by total descending; ties broken by the canonical Category order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryTotalDto"
+            }
+          }
+        },
+        "required": ["user", "isViewer", "total", "categories"]
+      },
+      "LeaderboardDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              }
+            ]
+          },
+          "start": {
+            "type": "string",
+            "description": "YYYY-MM-DD, inclusive.",
+            "example": "2026-08-03"
+          },
+          "end": {
+            "type": "string",
+            "description": "YYYY-MM-DD, inclusive.",
+            "example": "2026-08-09"
+          },
+          "currency": {
+            "description": "The viewer's Preferred Currency — every total below is in it.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupportedCurrency"
+              }
+            ]
+          },
+          "rows": {
+            "description": "The viewer and every Friend, always all present, sorted by total descending with ties broken by Username ascending. Position is the rank.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardRowDto"
+            }
+          }
+        },
+        "required": ["period", "start", "end", "currency", "rows"]
       }
     }
   }

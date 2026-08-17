@@ -243,3 +243,34 @@ export function formatPeriodRange(
 
   return `${formatShortDate(start, locale)} – ${formatShortDate(end, locale)}`;
 }
+
+/**
+ * `formatPeriodRange`'s sibling for the Leaderboard's Period Browser (design
+ * component `umxjF`, mobile ticket #12), which spells the year out and
+ * spaces the en dash — "5 – 11 Aug 2026" (en) / "5 – 11 thg 8 2026" (vi) —
+ * unlike the Summary Card's compact, uppercased, year-less "5–11 AUG". Two
+ * renderings of the same range because they're read in different contexts:
+ * the Summary Card is always "this Period" (the year is implied), while the
+ * Period Browser exists specifically to browse *other* years' Periods.
+ */
+export function formatPeriodRangeWithYear(
+  start: Date,
+  end: Date,
+  locale: SupportedLocale,
+): string {
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+
+  if (sameMonth) {
+    const startDay = getNumberFormatter(locale).format(start.getDate());
+    const endDay = getNumberFormatter(locale).format(end.getDate());
+    const month = MONTH_ABBREVIATIONS[locale][end.getMonth()];
+    return `${startDay} – ${endDay} ${month} ${end.getFullYear()}`;
+  }
+
+  if (sameYear) {
+    return `${formatShortDate(start, locale)} – ${formatShortDate(end, locale)} ${end.getFullYear()}`;
+  }
+
+  return `${formatFullDate(start, locale)} – ${formatFullDate(end, locale)}`;
+}

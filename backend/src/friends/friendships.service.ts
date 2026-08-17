@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ExpenseDto } from '../expenses/dto/expense.dto';
-import { ExpensesService } from '../expenses/expenses.service';
+import {
+  ExpensesService,
+  type CalendarDateRangeFilter,
+} from '../expenses/expenses.service';
 import { PublicUserDto } from '../users/dto/public-user.dto';
 import { toPublicUser } from '../users/user-view';
 import { UsersRepository } from '../users/users.repository';
@@ -49,10 +52,14 @@ export class FriendshipsService {
    * cancelled, or the caller's own Username — existence of the *account*
    * is not hidden here (Usernames are already public via
    * GET /users/:username), only whether a Friendship exists.
+   *
+   * `range` optionally narrows to Expense Date (issue #12's Leaderboard
+   * drill-down, browsing a specific Period).
    */
   async getFriendExpenses(
     readerId: string,
     usernameRaw: string,
+    range?: CalendarDateRangeFilter,
   ): Promise<ExpenseDto[]> {
     const owner = await this.usersRepository.findByUsername(
       usernameRaw.toLowerCase(),
@@ -74,6 +81,10 @@ export class FriendshipsService {
       throw new ForbiddenException('Not Friends with this User');
     }
 
-    return this.expensesService.findShareableForOwner(owner.id, readerId);
+    return this.expensesService.findShareableForOwner(
+      owner.id,
+      readerId,
+      range,
+    );
   }
 }

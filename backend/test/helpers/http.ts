@@ -119,6 +119,25 @@ export function statisticsBody(response: Response): StatisticsBody {
   return response.body as StatisticsBody;
 }
 
+export interface LeaderboardRowBody {
+  user: PublicUserBody;
+  isViewer: boolean;
+  total: string;
+  categories: CategoryTotalBody[];
+}
+
+export interface LeaderboardBody {
+  period: string;
+  start: string;
+  end: string;
+  currency: string;
+  rows: LeaderboardRowBody[];
+}
+
+export function leaderboardBody(response: Response): LeaderboardBody {
+  return response.body as LeaderboardBody;
+}
+
 interface ErrorBody {
   message: string | string[];
 }

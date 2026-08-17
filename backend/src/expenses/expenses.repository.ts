@@ -29,6 +29,12 @@ export interface ExpenseCategoryAmount {
   amount: Prisma.Decimal | null;
 }
 
+/** An inclusive Expense Date filter; either bound may be omitted. */
+export interface ExpenseDateRangeFilter {
+  start?: Date;
+  end?: Date;
+}
+
 export interface CreateExpenseData {
   ownerId: string;
   description: string;
@@ -92,10 +98,23 @@ export class ExpensesRepository {
    * Friend-only and Public only, never Private. Newest logged first, same
    * ordering as {@link findAllByOwner} — what GET /users/:username/expenses
    * (issue #11, src/friends) reads once a Friendship is confirmed.
+   *
+   * `range` optionally narrows to Expense Date (never Logged At) within
+   * `[start, end]`; each bound is independent (issue #12's Leaderboard
+   * drill-down browses a specific Period this way).
    */
-  findShareableByOwner(ownerId: string): Promise<ExpenseWithConversions[]> {
+  findShareableByOwner(
+    ownerId: string,
+    range?: ExpenseDateRangeFilter,
+  ): Promise<ExpenseWithConversions[]> {
     return this.prisma.expense.findMany({
-      where: { ownerId, visibility: { in: [...SHAREABLE_VISIBILITIES] } },
+      where: {
+        ownerId,
+        visibility: { in: [...SHAREABLE_VISIBILITIES] },
+        ...(range?.start || range?.end
+          ? { expenseDate: { gte: range.start, lte: range.end } }
+          : {}),
+      },
       orderBy: { loggedAt: 'desc' },
       include: { conversions: true },
     });

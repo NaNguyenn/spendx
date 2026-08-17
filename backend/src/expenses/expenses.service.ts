@@ -31,6 +31,12 @@ import {
 } from './expenses.repository';
 import { summarizeCategoryTotals } from './statistics-view';
 
+/** An inclusive Expense Date filter expressed as calendar-date strings. */
+export interface CalendarDateRangeFilter {
+  start?: string;
+  end?: string;
+}
+
 @Injectable()
 export class ExpensesService {
   constructor(
@@ -89,14 +95,23 @@ export class ExpensesService {
    * (expense-view.ts). Authorization — that `readerId` is actually a
    * Friend of `ownerId` — is the Friends module's job, not this one's: by
    * the time this is called the caller is already known to be entitled.
+   *
+   * `range` optionally narrows to Expense Date (issue #12's Leaderboard
+   * drill-down); each bound is independent and inclusive.
    */
   async findShareableForOwner(
     ownerId: string,
     readerId: string,
+    range?: CalendarDateRangeFilter,
   ): Promise<ExpenseDto[]> {
     const preferredCurrency = await this.preferredCurrencyOf(readerId);
-    const expenses =
-      await this.expensesRepository.findShareableByOwner(ownerId);
+    const expenses = await this.expensesRepository.findShareableByOwner(
+      ownerId,
+      {
+        start: range?.start ? calendarDateToDate(range.start) : undefined,
+        end: range?.end ? calendarDateToDate(range.end) : undefined,
+      },
+    );
     return expenses.map((expense) => toExpenseDto(expense, preferredCurrency));
   }
 

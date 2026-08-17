@@ -274,9 +274,29 @@ export interface paths {
     };
     /**
      * A Friend's Shareable Expenses
-     * @description Friend-only and Public Expenses only, never Private — newest logged first, converted into the caller's own Preferred Currency. Requires an existing Friendship with the owner.
+     * @description Friend-only and Public Expenses only, never Private — newest logged first, converted into the caller's own Preferred Currency. Requires an existing Friendship with the owner. Optionally narrowed to a Period via `start`/`end` (each independent and inclusive, by Expense Date) — how the Leaderboard drills into a past Period.
      */
     get: operations['UserExpensesController_findAll'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/leaderboard': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The Leaderboard: the caller and every Friend by Shareable Spend
+     * @description Ranks the caller and every one of their Friends by Shareable Spend (Friend-only and Public Expenses, never Private — even the caller's own row) within one Period, in the caller's Preferred Currency. Every Friend appears, zero-filled when they have no matching Expenses (ADR-0003). Defaults to the current ISO week; `anchor` browses any past Period.
+     */
+    get: operations['LeaderboardController_get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -487,6 +507,37 @@ export interface components {
       incoming: components['schemas']['FriendRequestDto'][];
       /** @description Requests the caller sent, newest first. */
       outgoing: components['schemas']['FriendRequestDto'][];
+    };
+    /** @enum {string} */
+    Period: 'week' | 'month';
+    LeaderboardRowDto: {
+      user: components['schemas']['PublicUserDto'];
+      /** @description True when this row is the requesting viewer themselves. */
+      isViewer: boolean;
+      /**
+       * @description This User's Shareable Spend for the Period, in the viewer's Preferred Currency, as a fixed-scale decimal string (4 decimal places). Never a JSON number. Zero when they have no matching Expenses — every row is always present (ADR-0003).
+       * @example 450000.0000
+       */
+      total: string;
+      /** @description Every Category (backend/CONTEXT.md), including zero totals, sorted by total descending; ties broken by the canonical Category order. */
+      categories: components['schemas']['CategoryTotalDto'][];
+    };
+    LeaderboardDto: {
+      period: components['schemas']['Period'];
+      /**
+       * @description YYYY-MM-DD, inclusive.
+       * @example 2026-08-03
+       */
+      start: string;
+      /**
+       * @description YYYY-MM-DD, inclusive.
+       * @example 2026-08-09
+       */
+      end: string;
+      /** @description The viewer's Preferred Currency — every total below is in it. */
+      currency: components['schemas']['SupportedCurrency'];
+      /** @description The viewer and every Friend, always all present, sorted by total descending with ties broken by Username ascending. Position is the rank. */
+      rows: components['schemas']['LeaderboardRowDto'][];
     };
   };
   responses: never;
@@ -933,7 +984,12 @@ export interface operations {
   };
   UserExpensesController_findAll: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Only Expenses whose Expense Date is on or after this date (YYYY-MM-DD), inclusive. Independent of `end`. */
+        start?: string;
+        /** @description Only Expenses whose Expense Date is on or before this date (YYYY-MM-DD), inclusive. Independent of `start`. */
+        end?: string;
+      };
       header?: never;
       path: {
         username: string;
@@ -959,6 +1015,37 @@ export interface operations {
       };
       /** @description Unknown Username. */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  LeaderboardController_get: {
+    parameters: {
+      query?: {
+        /** @description The Period to rank. Defaults to the current ISO week. */
+        period?: components['schemas']['Period'];
+        /** @description Any calendar date (YYYY-MM-DD) inside the desired Period — the response covers the ISO week or calendar month containing it, letting a caller browse a past Period. Defaults to today's date in the fixed app timezone (Asia/Ho_Chi_Minh, ADR-0004). */
+        anchor?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LeaderboardDto'];
+        };
+      };
+      /** @description Invalid `period` or `anchor`. */
+      400: {
         headers: {
           [name: string]: unknown;
         };

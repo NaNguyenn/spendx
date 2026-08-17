@@ -7,7 +7,7 @@ import { initials } from '@/lib/initials';
 
 interface FriendAvatarProps {
   displayName: string;
-  /** 44 in the design's Leaderboard rows (mobile ticket #12), 38 in Friend Request rows — this ticket's only caller. */
+  /** 42 in the design's Rank Row (mobile ticket #12, component `bHVHh`), 38 in Friend Request rows. */
   size?: number;
 }
 

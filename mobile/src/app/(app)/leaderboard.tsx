@@ -1,82 +1,116 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   acceptFriendRequest,
   fetchFriendRequests,
-  fetchFriends,
   removeFriendRequest,
   sendFriendRequest,
-  unfriend,
   type FriendRequestsDto,
-  type PublicUserDto,
 } from '@/api/friends';
+import {
+  fetchLeaderboard,
+  type LeaderboardDto,
+  type LeaderboardRowDto,
+} from '@/api/leaderboard';
 import { useSession } from '@/auth/session-context';
 import { TAB_BAR_INSET } from '@/components/app-tabs';
+import { CurrencyPill } from '@/components/currency-pill';
+import {
+  PeriodToggle,
+  type StatisticsPeriod,
+} from '@/components/expenses/period-toggle';
 import { PrimaryButton } from '@/components/form/primary-button';
 import { AddFriendForm } from '@/components/leaderboard/add-friend-form';
 import { FriendRequestRow } from '@/components/leaderboard/friend-request-row';
-import { FriendRow } from '@/components/leaderboard/friend-row';
+import { PeriodBrowser } from '@/components/leaderboard/period-browser';
+import { RankRow } from '@/components/leaderboard/rank-row';
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
+import {
+  browseNext,
+  browsePrevious,
+  CURRENT_PERIOD_BROWSE_STATE,
+  friendCount,
+  rankingOverlineKey,
+  type PeriodBrowseState,
+} from '@/lib/leaderboard';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'loaded'; requests: FriendRequestsDto; friends: PublicUserDto[] };
+  | {
+      status: 'loaded';
+      requests: FriendRequestsDto;
+      leaderboard: LeaderboardDto;
+    };
 
-const keyExtractor = (friend: PublicUserDto) => friend.username;
+const keyExtractor = (row: LeaderboardRowDto) => row.user.username;
 
 /**
- * The Leaderboard tab's Friends surface (mobile ticket #11): the
- * exact-Username add-friend lookup, pending Friend Requests in both
- * directions, and the Friends list. The Shareable-Spend ranking itself is
- * mobile ticket #12 — this screen only ever shows the social graph, never
- * an amount.
+ * The Leaderboard tab (mobile ticket #12): the exact-Username add-friend
+ * lookup and pending Friend Requests (ticket #11, unchanged), a Period
+ * Browser for browsing weeks/months, and the Shareable-Spend ranking.
  *
- * Refetches on focus, same reasoning as the Expenses tab (index.tsx):
- * every mutation here happens inline on this screen (no sibling sheet to
- * return from), so those call `load()` directly instead of relying on a
- * focus event that wouldn't fire.
+ * DESIGN DECISION: the plain Friends list ticket #11 shipped (`FriendRow`,
+ * now deleted) is fully absorbed into the ranking below — every Friend
+ * already has a Rank Row, so a second roster naming the same people would
+ * be pure duplication. The Unfriend affordance that lived on that list
+ * moves to the friend drill-down screen (app/friend/[username].tsx),
+ * reachable from an expanded Rank Row's "View expenses" — flagged here as a
+ * scope call this ticket made past its own written spec, not something the
+ * design frame (`BNS3w` in designs/spendx-mock.pen) explicitly shows.
+ *
+ * `period` and `browse` (lib/leaderboard.ts's `PeriodBrowseState`) live
+ * outside `LoadState`, same as the Expenses tab's own `period` — but unlike
+ * that screen (both Periods come back in one `fetchStatistics` call), a
+ * change to either one here *does* change the query
+ * (`GET /leaderboard?period&anchor`), so `load`'s own dependency array
+ * includes them: changing `period` or `browse.anchor` gives `load` a new
+ * identity, which re-fires the focus effect below even while this tab stays
+ * focused (see useFocusEffect's own dependency-change behavior).
  */
 export default function LeaderboardScreen() {
-  const { token } = useSession();
+  const { user, token } = useSession();
   const theme = useTheme();
+  const router = useRouter();
   const { t } = useTranslation();
 
   const [state, setState] = useState<LoadState>({ status: 'loading' });
-  // The row currently being acted on — a Friend Request id, or a Username
-  // for unfriending — disables just that row's buttons rather than the
-  // whole screen, and guards against a second tap racing the first.
+  const [period, setPeriod] = useState<StatisticsPeriod>('week');
+  const [browse, setBrowse] = useState<PeriodBrowseState>(
+    CURRENT_PERIOD_BROWSE_STATE,
+  );
+  // One Rank Row open at a time — an accordion, not a checklist, per the
+  // design's expanded state (`WuHB2`).
+  const [expandedUsername, setExpandedUsername] = useState<string | null>(null);
+  // The row currently being acted on — a Friend Request id — disables just
+  // that row's buttons rather than the whole screen, and guards against a
+  // second tap racing the first. Unfriend no longer happens on this screen
+  // (see the header comment), so this is Friend Request ids only now.
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
-    // Only the first load (or an error retry) shows the full-screen spinner.
-    // Refreshes after a mutation keep the loaded list on screen — flipping
-    // to 'loading' would unmount the list header and lose AddFriendForm's
-    // "sent" confirmation along with the acting row's busy spinner.
+    // Only the first load (or an error retry) shows the full-screen spinner
+    // — see index.tsx's `load` for the same reasoning applied there to a
+    // mutation refresh; here it also covers a period/browse change so the
+    // Period Toggle and Period Browser never flash away mid-browse.
     setState((prev) =>
       prev.status === 'loaded' ? prev : { status: 'loading' },
     );
     try {
-      const [requests, friends] = await Promise.all([
+      const [requests, leaderboard] = await Promise.all([
         fetchFriendRequests(token),
-        fetchFriends(token),
+        fetchLeaderboard(token, { period, anchor: browse.anchor ?? undefined }),
       ]);
-      setState({ status: 'loaded', requests, friends });
+      setState({ status: 'loaded', requests, leaderboard });
     } catch (error) {
       const result = getErrorMessage(error);
       setState({
@@ -84,7 +118,7 @@ export default function LeaderboardScreen() {
         message: result.kind === 'server' ? result.text : t(result.key),
       });
     }
-  }, [token, t]);
+  }, [token, period, browse.anchor, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -137,37 +171,64 @@ export default function LeaderboardScreen() {
     [token, runAction],
   );
 
-  const confirmUnfriend = useCallback(
-    (friend: PublicUserDto) => {
-      Alert.alert(
-        t('leaderboard.friends.unfriendConfirmTitle', {
-          name: friend.displayName,
-        }),
-        t('leaderboard.friends.unfriendConfirmMessage'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('leaderboard.friends.unfriendConfirm'),
-            style: 'destructive',
-            onPress: () => {
-              if (!token) return;
-              void runAction(friend.username, () =>
-                unfriend(token, friend.username),
-              );
-            },
-          },
-        ],
-      );
+  const onChangePeriod = useCallback((next: StatisticsPeriod) => {
+    setPeriod(next);
+    // A new `period` starts back at the current one — browsing a past week
+    // doesn't imply anything about which month to land on, and vice versa.
+    setBrowse(CURRENT_PERIOD_BROWSE_STATE);
+    setExpandedUsername(null);
+  }, []);
+
+  const onPressPrevious = useCallback(() => {
+    if (state.status !== 'loaded') return;
+    setBrowse((prev) => browsePrevious(prev, state.leaderboard.start));
+    setExpandedUsername(null);
+  }, [state]);
+
+  const onPressNext = useCallback(() => {
+    if (state.status !== 'loaded') return;
+    setBrowse((prev) => browseNext(prev, state.leaderboard.end));
+    setExpandedUsername(null);
+  }, [state]);
+
+  const onToggleExpand = useCallback((username: string) => {
+    setExpandedUsername((prev) => (prev === username ? null : username));
+  }, []);
+
+  const onViewExpenses = useCallback(
+    (row: LeaderboardRowDto) => {
+      if (state.status !== 'loaded') return;
+      router.push({
+        pathname: '/friend/[username]',
+        params: {
+          username: row.user.username,
+          displayName: row.user.displayName,
+          start: state.leaderboard.start,
+          end: state.leaderboard.end,
+        },
+      });
     },
-    [token, runAction, t],
+    [state, router],
   );
 
   const listHeader = useMemo(() => {
     if (state.status !== 'loaded') return null;
     const { incoming, outgoing } = state.requests;
+    const { start, end, rows } = state.leaderboard;
+    const friends = friendCount(rows);
 
     return (
       <View style={styles.headerSection}>
+        <PeriodToggle value={period} onChange={onChangePeriod} />
+        <PeriodBrowser
+          period={period}
+          start={start}
+          end={end}
+          offset={browse.offset}
+          onPrevious={onPressPrevious}
+          onNext={onPressNext}
+        />
+
         <AddFriendForm onSend={onSend} />
 
         {incoming.length > 0 ? (
@@ -219,16 +280,51 @@ export default function LeaderboardScreen() {
           </ThemedText>
         ) : null}
 
-        <ThemedText style={styles.sectionTitle}>
-          {t('leaderboard.friends.overline', {
-            count: String(state.friends.length),
-          })}
-        </ThemedText>
+        <View style={styles.section}>
+          <ThemedText type="label" themeColor="textTertiary">
+            {t(rankingOverlineKey(period, browse.offset), {
+              count: String(friends),
+            })}
+          </ThemedText>
+
+          {/* The ranking still lists the viewer's own row below — this only
+              covers the "0 Friends yet" case, same copy the old Friends
+              list used for its own empty state. */}
+          {friends === 0 ? (
+            <View
+              style={[
+                styles.empty,
+                { backgroundColor: theme.surface, borderColor: theme.border },
+              ]}
+            >
+              <ThemedText style={styles.emptyTitle}>
+                {t('leaderboard.friends.empty.title')}
+              </ThemedText>
+              <ThemedText themeColor="textTertiary" style={styles.emptyNote}>
+                {t('leaderboard.friends.empty.note')}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
       </View>
     );
-  }, [state, busyKey, actionError, onSend, onAccept, onRemoveRequest, t]);
+  }, [
+    state,
+    period,
+    browse.offset,
+    busyKey,
+    actionError,
+    onSend,
+    onAccept,
+    onRemoveRequest,
+    onChangePeriod,
+    onPressPrevious,
+    onPressNext,
+    theme,
+    t,
+  ]);
 
-  if (!token) return null;
+  if (!user || !token) return null;
 
   return (
     <SafeAreaView
@@ -236,10 +332,13 @@ export default function LeaderboardScreen() {
       edges={['top', 'bottom']}
     >
       <View style={styles.header}>
-        <ThemedText type="title">{t('tab.leaderboard')}</ThemedText>
-        <ThemedText themeColor="textSecondary" style={styles.subtitle}>
-          {t('leaderboard.comingSoon')}
-        </ThemedText>
+        <View style={styles.titles}>
+          <ThemedText type="title">{t('tab.leaderboard')}</ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.subtitle}>
+            {t('leaderboard.subtitle')}
+          </ThemedText>
+        </View>
+        <CurrencyPill currency={user.preferredCurrency} />
       </View>
 
       {state.status === 'loading' ? (
@@ -255,49 +354,26 @@ export default function LeaderboardScreen() {
         </View>
       ) : (
         <FlatList
-          data={state.friends}
+          data={state.leaderboard.rows}
           keyExtractor={keyExtractor}
-          renderItem={({ item, index }) => {
-            const isFirst = index === 0;
-            const isLast = index === state.friends.length - 1;
-            return (
-              <View
-                style={[
-                  styles.rowWrapper,
-                  { backgroundColor: theme.surface, borderColor: theme.border },
-                  isFirst && styles.rowWrapperFirst,
-                  isLast && styles.rowWrapperLast,
-                ]}
-              >
-                <FriendRow
-                  friend={item}
-                  busy={busyKey === item.username}
-                  onUnfriend={confirmUnfriend}
-                />
-              </View>
-            );
-          }}
+          renderItem={({ item, index }) => (
+            <View style={styles.rowSpacing}>
+              <RankRow
+                row={item}
+                rank={index + 1}
+                currency={state.leaderboard.currency}
+                isExpanded={expandedUsername === item.user.username}
+                onToggleExpand={onToggleExpand}
+                onViewExpenses={onViewExpenses}
+              />
+            </View>
+          )}
           ListHeaderComponent={listHeader}
           style={styles.list}
           contentContainerStyle={[
-            state.friends.length === 0 && styles.emptyContent,
+            styles.listContent,
             { paddingBottom: TAB_BAR_INSET },
           ]}
-          ListEmptyComponent={
-            <View
-              style={[
-                styles.empty,
-                { backgroundColor: theme.surface, borderColor: theme.border },
-              ]}
-            >
-              <ThemedText style={styles.emptyTitle}>
-                {t('leaderboard.friends.empty.title')}
-              </ThemedText>
-              <ThemedText themeColor="textTertiary" style={styles.emptyNote}>
-                {t('leaderboard.friends.empty.note')}
-              </ThemedText>
-            </View>
-          }
         />
       )}
     </SafeAreaView>
@@ -309,10 +385,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sp3,
     paddingHorizontal: Spacing.sp4,
     paddingTop: Spacing.sp1,
-    paddingBottom: Spacing.sp2,
+  },
+  titles: {
+    flex: 1,
+    gap: 2,
   },
   subtitle: {
     fontSize: 12.5,
@@ -320,7 +401,8 @@ const styles = StyleSheet.create({
   headerSection: {
     gap: Spacing.sp5,
     paddingHorizontal: Spacing.sp4,
-    paddingBottom: Spacing.sp5,
+    paddingTop: Spacing.sp4,
+    paddingBottom: Spacing.sp2,
   },
   section: {
     gap: Spacing.sp2,
@@ -332,32 +414,17 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '600',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
   list: {
     flex: 1,
   },
-  // Same bordered-row-box pattern as the Expenses tab (index.tsx) — see that
-  // file's `rowWrapper` doc comment for why each row wraps itself instead of
-  // one shared container.
-  rowWrapper: {
-    marginHorizontal: Spacing.sp4,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderRightWidth: StyleSheet.hairlineWidth,
+  listContent: {
+    paddingHorizontal: Spacing.sp4,
   },
-  rowWrapperFirst: {
-    borderTopLeftRadius: Radii.lg,
-    borderTopRightRadius: Radii.lg,
-    overflow: 'hidden',
-  },
-  rowWrapperLast: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomLeftRadius: Radii.lg,
-    borderBottomRightRadius: Radii.lg,
-    overflow: 'hidden',
+  // Rank Row cards carry their own surface/border (rank-row.tsx) — unlike
+  // the Expenses/old Friends lists, there is no shared bordered box to wrap
+  // rows in, just breathing room between one card and the next.
+  rowSpacing: {
+    paddingBottom: Spacing.sp2,
   },
   centered: {
     flex: 1,
@@ -372,17 +439,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   empty: {
-    marginHorizontal: Spacing.sp4,
     borderRadius: Radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     padding: Spacing.sp6,
     alignItems: 'center',
     gap: Spacing.sp1,
-  },
-  emptyContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
   },
   emptyTitle: {
     fontSize: 15,

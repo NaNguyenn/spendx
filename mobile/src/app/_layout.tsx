@@ -81,6 +81,11 @@ function RootNavigator() {
             sheetGrabberVisible: false,
           }}
         />
+        {/* The Leaderboard's friend drill-down (ticket #12): a pushed
+            screen, not a sheet — default `card` presentation — for the same
+            "every route under (app)/ becomes a tab slot" reason log-expense
+            lives here. See app/friend/[username].tsx's header comment. */}
+        <Stack.Screen name="friend/[username]" />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />
