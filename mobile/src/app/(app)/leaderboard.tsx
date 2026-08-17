@@ -140,10 +140,10 @@ export default function LeaderboardScreen() {
   const confirmUnfriend = useCallback(
     (friend: PublicUserDto) => {
       Alert.alert(
-        t('leaderboard.friends.unfriendConfirmTitle'),
-        t('leaderboard.friends.unfriendConfirmMessage', {
+        t('leaderboard.friends.unfriendConfirmTitle', {
           name: friend.displayName,
         }),
+        t('leaderboard.friends.unfriendConfirmMessage'),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
