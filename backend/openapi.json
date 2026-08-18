@@ -717,6 +717,107 @@
         "summary": "The Feed: every Public Expense app-wide, newest first",
         "tags": ["feed"]
       }
+    },
+    "/expenses/{id}/like": {
+      "put": {
+        "description": "Visible ⇒ likeable (backend/CONTEXT.md — Like): the caller may Like any Expense they can see — their own, any Public Expense, or a Friend's Friend-only Expense. Idempotent: liking an already-liked Expense stays a single Like.",
+        "operationId": "LikesController_like",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Liked (or already was)."
+          },
+          "404": {
+            "description": "No such Expense, or the caller cannot see it."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Like an Expense",
+        "tags": ["likes"]
+      },
+      "delete": {
+        "description": "Idempotent: 204s even when the caller had not Liked it.",
+        "operationId": "LikesController_unlike",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unliked (or already was not)."
+          },
+          "404": {
+            "description": "No such Expense, or the caller cannot see it."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unlike an Expense",
+        "tags": ["likes"]
+      }
+    },
+    "/expenses/{id}/likes": {
+      "get": {
+        "description": "The likers, newest Like first, visible to exactly those who can see the Expense (backend/CONTEXT.md — Like).",
+        "operationId": "LikesController_findLikers",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUserDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such Expense, or the caller cannot see it."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Who liked this Expense",
+        "tags": ["likes"]
+      }
     }
   },
   "info": {
@@ -1047,6 +1148,14 @@
           "loggedAt": {
             "type": "string",
             "description": "ISO 8601 — the immutable Logged At."
+          },
+          "likeCount": {
+            "type": "number",
+            "description": "The total number of Likes on this Expense (backend/CONTEXT.md — Like), visible to exactly those who can see the Expense itself."
+          },
+          "likedByViewer": {
+            "type": "boolean",
+            "description": "Whether the requesting caller has liked this Expense."
           }
         },
         "required": [
@@ -1059,7 +1168,9 @@
           "category",
           "visibility",
           "expenseDate",
-          "loggedAt"
+          "loggedAt",
+          "likeCount",
+          "likedByViewer"
         ]
       },
       "CategoryTotalDto": {
@@ -1356,6 +1467,14 @@
             "type": "string",
             "description": "ISO 8601 — the immutable Logged At."
           },
+          "likeCount": {
+            "type": "number",
+            "description": "The total number of Likes on this Expense (backend/CONTEXT.md — Like), visible to exactly those who can see the Expense itself."
+          },
+          "likedByViewer": {
+            "type": "boolean",
+            "description": "Whether the requesting caller has liked this Expense."
+          },
           "owner": {
             "$ref": "#/components/schemas/FeedOwnerDto"
           }
@@ -1371,6 +1490,8 @@
           "visibility",
           "expenseDate",
           "loggedAt",
+          "likeCount",
+          "likedByViewer",
           "owner"
         ]
       },

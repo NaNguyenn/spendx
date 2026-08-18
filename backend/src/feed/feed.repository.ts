@@ -4,12 +4,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { FeedCursor } from './feed-cursor';
 
 /**
- * One Feed row: a Public Expense, its full Conversion Snapshot, and its
- * owner's public identity (Username, Display Name — email is never public).
+ * One Feed row: a Public Expense, its full Conversion Snapshot, its owner's
+ * public identity (Username, Display Name — email is never public), and its
+ * Like aggregate (backend/CONTEXT.md — Like) pre-filtered to the viewer —
+ * see `ExpenseWithLikeState` in `../expenses/expenses.repository.ts`.
  */
 export type FeedExpense = Expense & {
   conversions: ExpenseConversion[];
   owner: { username: string; displayName: string };
+  _count: { likes: number };
+  likes: { userId: string }[];
 };
 
 /**
@@ -30,11 +34,13 @@ export class FeedRepository {
    * cursor.id)`, the keyset predicate that keeps page boundaries stable as
    * new Expenses arrive (backed by `@@index([visibility, loggedAt, id])`).
    * Callers decide `take` — see `feed.service.ts`, which fetches one extra
-   * row to know whether a `nextCursor` exists.
+   * row to know whether a `nextCursor` exists. `viewerId` filters the Like
+   * aggregate to that one viewer (backend/CONTEXT.md — Like).
    */
   findPage(
     cursor: FeedCursor | undefined,
     take: number,
+    viewerId: string,
   ): Promise<FeedExpense[]> {
     return this.prisma.expense.findMany({
       where: {
@@ -53,6 +59,8 @@ export class FeedRepository {
       include: {
         conversions: true,
         owner: { select: { username: true, displayName: true } },
+        _count: { select: { likes: true } },
+        likes: { where: { userId: viewerId }, select: { userId: true } },
       },
     });
   }

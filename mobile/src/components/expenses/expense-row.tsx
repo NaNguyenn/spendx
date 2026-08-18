@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { VisibilityBadge } from '@/components/expenses/visibility-badge';
+import { LikePill } from '@/components/like-pill';
 import { ThemedText } from '@/components/themed-text';
 import { CATEGORY_META } from '@/constants/category';
 import { Spacing } from '@/constants/theme';
@@ -28,6 +29,17 @@ interface ExpenseRowProps {
    * row per render — the same memo-preserving rule as `now` above.
    */
   onPress: (expense: ExpenseDto) => void;
+  /**
+   * Tap the Like pill → toggle (issue #14). Optional, and deliberately not
+   * defaulted to a no-op: when absent, the Like pill doesn't render at all
+   * rather than rendering inert — the owner's own Expenses tab (index.tsx)
+   * passes no like props and stays pixel-identical to before this ticket,
+   * since liking your own Expense isn't a feature this ticket adds there.
+   * The friend drill-down (app/friend/[username].tsx) is the one caller
+   * that passes this. Same memo-preserving "one stable parent callback"
+   * rule as `onPress`.
+   */
+  onToggleLike?: (expense: ExpenseDto) => void;
 }
 
 /**
@@ -36,13 +48,25 @@ interface ExpenseRowProps {
  * Converted Amount over the Original Amount. `memo`d because the list this
  * renders in can grow over a Personal Spending History — see the
  * vercel-react-native-skills list-performance rules this file follows:
- * `expense` and `now` are the only props, both stable references from the
- * parent's state rather than rebuilt per render.
+ * `expense`, `now`, and `onPress` are stable references from the parent's
+ * state rather than rebuilt per render; `onToggleLike` is the one prop this
+ * file adds later than the rest (issue #14) and follows the same rule.
+ *
+ * The Like pill (undesigned for this row — the mock's Like pill only
+ * appears on the Feed Card, `pfaWO`/`VI6RZ`) sits in the meta row, after the
+ * date, rather than under the amounts column: the amounts column is
+ * right-aligned and already exactly as wide as its two lines of digits, so
+ * a pill there would either force it wider or wrap; the meta row is a
+ * left-aligned flex row built to hold a growing set of small badges
+ * (Visibility, date) and takes a third with no layout changes. Renders
+ * `components/like-pill.tsx`'s `compact` size — see that file for the
+ * liked/unliked anatomy shared with FeedCard's pill.
  */
 export const ExpenseRow = memo(function ExpenseRow({
   expense,
   now,
   onPress,
+  onToggleLike,
 }: ExpenseRowProps) {
   const theme = useTheme();
   const { locale } = useTranslation();
@@ -79,6 +103,14 @@ export const ExpenseRow = memo(function ExpenseRow({
           <ThemedText themeColor="textTertiary" style={styles.date}>
             {formatDateTime(new Date(expense.loggedAt), locale, now)}
           </ThemedText>
+          {onToggleLike ? (
+            <LikePill
+              likeCount={expense.likeCount}
+              likedByViewer={expense.likedByViewer}
+              onPress={() => onToggleLike(expense)}
+              compact
+            />
+          ) : null}
         </View>
       </View>
 

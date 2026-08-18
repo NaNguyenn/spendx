@@ -75,6 +75,8 @@ export interface ExpenseBody {
   visibility: string;
   expenseDate: string;
   loggedAt: string;
+  likeCount: number;
+  likedByViewer: boolean;
 }
 
 export function expenseBody(response: Response): ExpenseBody {

@@ -87,4 +87,13 @@ export class FriendshipsService {
       range,
     );
   }
+
+  /**
+   * The cross-module seam LikesService's Visibility gate uses for a
+   * Friend-only Expense (issue #14), without exposing FriendshipsRepository
+   * — see rules/arch-module-sharing.md.
+   */
+  areFriends(userId: string, otherUserId: string): Promise<boolean> {
+    return this.friendshipsRepository.areFriends(userId, otherUserId);
+  }
 }

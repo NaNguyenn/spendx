@@ -31,6 +31,10 @@ type PathsWithPatch = {
   [P in keyof paths]: paths[P] extends { patch: object } ? P : never;
 }[keyof paths];
 
+type PathsWithPut = {
+  [P in keyof paths]: paths[P] extends { put: object } ? P : never;
+}[keyof paths];
+
 type PathsWithDelete = {
   [P in keyof paths]: paths[P] extends { delete: object } ? P : never;
 }[keyof paths];
@@ -117,6 +121,31 @@ export async function apiPatch<P extends PathsWithPatch>(
   return request(
     path as string,
     { method: 'PATCH', body: JSON.stringify(body) },
+    options,
+  );
+}
+
+// Every PUT route currently in the schema (`/expenses/{id}/like`) is
+// bodyless — its only input is the `{id}` path param, same shape as the
+// bodyless Friend Request accept POST above — so `apiPut` needs the same
+// `undefined`-widening `PostBody` does, not `apiPatch`'s plain
+// `JsonRequestBody` (every PATCH route has an actual body).
+type PutBody<P extends PathsWithPut> =
+  JsonRequestBody<paths[P]['put']> extends never
+    ? undefined
+    : JsonRequestBody<paths[P]['put']>;
+
+export async function apiPut<P extends PathsWithPut>(
+  path: P,
+  body: PutBody<P>,
+  options: RequestOptions = {},
+): Promise<OkJson<paths[P]['put']>> {
+  return request(
+    path as string,
+    {
+      method: 'PUT',
+      body: body === undefined ? undefined : JSON.stringify(body),
+    },
     options,
   );
 }

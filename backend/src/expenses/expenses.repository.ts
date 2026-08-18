@@ -17,6 +17,29 @@ export type ExpenseWithConversions = Expense & {
 };
 
 /**
+ * Adds the Like aggregate `toExpenseDto` needs for `likeCount` and
+ * `likedByViewer` (backend/CONTEXT.md — Like): the total Like count, plus
+ * `likes` pre-filtered to exactly the requesting viewer's row, if any.
+ * `@@id([userId, expenseId])` guarantees `likes` never has more than one
+ * entry — `toExpenseDto` only checks whether it's empty. A freshly created
+ * Expense has no Likes yet, so `create` returns `ExpenseWithConversions`
+ * only; its caller (ExpensesService.create) supplies `{ likes: 0 }`/`[]`
+ * directly rather than querying for a Like that cannot exist.
+ */
+export type ExpenseWithLikeState = ExpenseWithConversions & {
+  _count: { likes: number };
+  likes: { userId: string }[];
+};
+
+/** The `include` shared by every read that needs `likeCount`/`likedByViewer`. */
+function likeStateInclude(viewerId: string) {
+  return {
+    _count: { select: { likes: true } },
+    likes: { where: { userId: viewerId }, select: { userId: true } },
+  } as const;
+}
+
+/**
  * One Expense's Category and its Conversion Snapshot entry for a single
  * currency — see {@link ExpensesRepository.findCategoryAmountsForOwnerInRange}.
  * `amount` is `null` only when that entry is missing, which the all-or-
@@ -84,12 +107,17 @@ export class ExpensesRepository {
     });
   }
 
-  /** The owner's own Expenses (every Visibility), newest logged first. */
-  findAllByOwner(ownerId: string): Promise<ExpenseWithConversions[]> {
+  /**
+   * The owner's own Expenses (every Visibility), newest logged first. The
+   * viewer is always the owner here, so the Like state is filtered to
+   * `ownerId` too — an owner can Like their own Expense (backend/CONTEXT.md
+   * — Like).
+   */
+  findAllByOwner(ownerId: string): Promise<ExpenseWithLikeState[]> {
     return this.prisma.expense.findMany({
       where: { ownerId },
       orderBy: { loggedAt: 'desc' },
-      include: { conversions: true },
+      include: { conversions: true, ...likeStateInclude(ownerId) },
     });
   }
 
@@ -102,11 +130,16 @@ export class ExpensesRepository {
    * `range` optionally narrows to Expense Date (never Logged At) within
    * `[start, end]`; each bound is independent (issue #12's Leaderboard
    * drill-down browses a specific Period this way).
+   *
+   * `readerId` is the viewer — distinct from `ownerId` here, unlike
+   * {@link findAllByOwner} — so the Like state is filtered to the reader's
+   * own Like, not the owner's.
    */
   findShareableByOwner(
     ownerId: string,
+    readerId: string,
     range?: ExpenseDateRangeFilter,
-  ): Promise<ExpenseWithConversions[]> {
+  ): Promise<ExpenseWithLikeState[]> {
     return this.prisma.expense.findMany({
       where: {
         ownerId,
@@ -116,7 +149,7 @@ export class ExpensesRepository {
           : {}),
       },
       orderBy: { loggedAt: 'desc' },
-      include: { conversions: true },
+      include: { conversions: true, ...likeStateInclude(readerId) },
     });
   }
 
@@ -160,12 +193,12 @@ export class ExpensesRepository {
     id: string,
     ownerId: string,
     data: UpdateExpenseData,
-  ): Promise<ExpenseWithConversions | null> {
+  ): Promise<ExpenseWithLikeState | null> {
     try {
       return await this.prisma.expense.update({
         where: { id, ownerId },
         data,
-        include: { conversions: true },
+        include: { conversions: true, ...likeStateInclude(ownerId) },
       });
     } catch (error) {
       // P2025: no row matched the filter — the not-found this method's
@@ -186,5 +219,19 @@ export class ExpensesRepository {
       where: { id, ownerId },
     });
     return count > 0;
+  }
+
+  /**
+   * `ownerId` and Visibility only — never the full row — the lean shape
+   * LikesService's Visibility gate needs (backend/CONTEXT.md — Like:
+   * "visible ⇒ likeable"). `null` for a nonexistent Expense.
+   */
+  findOwnerAndVisibility(
+    id: string,
+  ): Promise<{ ownerId: string; visibility: Visibility } | null> {
+    return this.prisma.expense.findUnique({
+      where: { id },
+      select: { ownerId: true, visibility: true },
+    });
   }
 }

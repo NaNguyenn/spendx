@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import type { FeedItemDto } from '@/api/feed';
 import { VisibilityBadge } from '@/components/expenses/visibility-badge';
 import { FriendAvatar } from '@/components/leaderboard/friend-avatar';
+import { LikePill } from '@/components/like-pill';
 import { ThemedText } from '@/components/themed-text';
 import { CATEGORY_META } from '@/constants/category';
 import { Radii } from '@/constants/theme';
@@ -23,25 +24,44 @@ interface FeedCardProps {
    * time, defeating `memo` below for every card on every parent re-render.
    */
   now: Date;
+  /**
+   * Tap the Like pill → toggle. Takes the item so the parent can pass one
+   * stable callback for every card instead of a fresh closure per card per
+   * render — the same memo-preserving rule as `onPress` in
+   * expense-row.tsx. The optimistic flip and the API call both live in
+   * feed.tsx; this component only renders whatever `item.likedByViewer`/
+   * `likeCount` currently say.
+   */
+  onToggleLike: (item: FeedItemDto) => void;
 }
 
 /**
  * One card of the Feed (design component `pfaWO`, "Component — Feed Card"):
  * owner header (avatar, display name, "@handle · relative time",
  * Visibility badge), amount row (Converted Amount, Original Amount,
- * Category chip), then the description. `memo`'d for the same reason
- * ExpenseRow is — an infinite-scroll list that only grows, never shrinks.
+ * Category chip), description, then the Actions row. `memo`'d for the same
+ * reason ExpenseRow is — an infinite-scroll list that only grows, never
+ * shrinks.
  *
- * Two deliberate divergences from the mock (mobile/CONTEXT.md's "say which
+ * Three deliberate divergences from the mock (mobile/CONTEXT.md's "say which
  * one wins" rule):
  *  - The mock's Original line reads "$48.65 · rate 25.694"; the rate never
  *    crosses the wire (ADR-0008), so this shows the Original Amount only,
  *    and omits the line entirely when it would just repeat the Converted
  *    Amount (same currency both sides) — identical rule to expense-row.tsx.
- *  - The mock's Like/Report/Block actions row and Attachment image slot are
- *    issues #14/#15/#16/#10 — left out entirely, not stubbed.
+ *  - The Actions row (`r6xr9`) ships with only its Left/Like pill (`VI6RZ`):
+ *    Report and Block (`AnppS`/`GiaGl`) are issues #15/#16, still left out
+ *    entirely, not stubbed. The Attachment image slot is issue #10, same
+ *    treatment.
+ *  - The Like pill itself (`VI6RZ`, including its unliked-state
+ *    extrapolation) is `components/like-pill.tsx` — see that file's doc
+ *    comment.
  */
-export const FeedCard = memo(function FeedCard({ item, now }: FeedCardProps) {
+export const FeedCard = memo(function FeedCard({
+  item,
+  now,
+  onToggleLike,
+}: FeedCardProps) {
   const theme = useTheme();
   const { t, locale } = useTranslation();
   const categoryMeta = CATEGORY_META[item.category];
@@ -124,6 +144,14 @@ export const FeedCard = memo(function FeedCard({ item, now }: FeedCardProps) {
       <ThemedText themeColor="textSecondary" style={styles.description}>
         {item.description}
       </ThemedText>
+
+      <View style={styles.actions}>
+        <LikePill
+          likeCount={item.likeCount}
+          likedByViewer={item.likedByViewer}
+          onPress={() => onToggleLike(item)}
+        />
+      </View>
     </View>
   );
 });
@@ -185,5 +213,9 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 13.5,
     lineHeight: 19.6,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

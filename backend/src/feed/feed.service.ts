@@ -44,7 +44,11 @@ export class FeedService {
 
     // One extra row decides whether a nextCursor exists, without a second
     // round trip.
-    const rows = await this.feedRepository.findPage(cursor, limit + 1);
+    const rows = await this.feedRepository.findPage(
+      cursor,
+      limit + 1,
+      viewerId,
+    );
     const page = rows.slice(0, limit);
     const last = page[page.length - 1];
     const nextCursor =

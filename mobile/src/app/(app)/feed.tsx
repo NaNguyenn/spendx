@@ -16,10 +16,12 @@ import { FeedCard } from '@/components/feed/feed-card';
 import { PrimaryButton } from '@/components/form/primary-button';
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
+import { useLikeToggle } from '@/hooks/use-like-toggle';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
 import { appendFeedPage, resetFeedState, type FeedLoadState } from '@/lib/feed';
+import { toggleLike } from '@/lib/likes';
 
 type LoadState =
   | { status: 'loading' }
@@ -152,6 +154,19 @@ export default function FeedScreen() {
     }
   }, [token, state]);
 
+  // Optimistic Like toggle (issue #14) — the double-tap guard, the
+  // pre-toggle branch, and the silent-revert-on-failure all live in
+  // `useLikeToggle`; this screen only supplies how to apply one flip to its
+  // own `{ items }` state shape.
+  const applyLikeToggle = useCallback((expenseId: string) => {
+    setState((prev) =>
+      prev.status === 'loaded'
+        ? { ...prev, items: toggleLike(prev.items, expenseId) }
+        : prev,
+    );
+  }, []);
+  const handleToggleLike = useLikeToggle(token, applyLikeToggle);
+
   if (!user || !token) return null;
 
   return (
@@ -185,7 +200,7 @@ export default function FeedScreen() {
           keyExtractor={keyExtractor}
           renderItem={({ item }) => (
             <View style={styles.rowSpacing}>
-              <FeedCard item={item} now={now} />
+              <FeedCard item={item} now={now} onToggleLike={handleToggleLike} />
             </View>
           )}
           style={styles.list}

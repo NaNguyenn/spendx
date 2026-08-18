@@ -19,11 +19,13 @@ import { ExpenseRow } from '@/components/expenses/expense-row';
 import { PrimaryButton } from '@/components/form/primary-button';
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
+import { useLikeToggle } from '@/hooks/use-like-toggle';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
 import { dateFromCalendarString } from '@/lib/expense-date';
 import { formatPeriodRangeWithYear } from '@/lib/format';
+import { toggleLike } from '@/lib/likes';
 
 const BACK_ICON: SymbolViewProps['name'] = {
   ios: 'chevron.left',
@@ -157,6 +159,21 @@ export default function FriendExpensesScreen() {
     );
   }, [token, params.username, params.displayName, router, t]);
 
+  // Optimistic Like toggle (issue #14) — the double-tap guard, the
+  // pre-toggle branch, and the silent-revert-on-failure (including the 404
+  // case: the Expense went invisible mid-view, e.g. the owner changed its
+  // Visibility or unfriended back) all live in `useLikeToggle`; this screen
+  // only supplies how to apply one flip to its own `{ expenses }` state
+  // shape.
+  const applyLikeToggle = useCallback((expenseId: string) => {
+    setState((prev) =>
+      prev.status === 'loaded'
+        ? { ...prev, expenses: toggleLike(prev.expenses, expenseId) }
+        : prev,
+    );
+  }, []);
+  const handleToggleLike = useLikeToggle(token, applyLikeToggle);
+
   if (!token || !params.username) return null;
 
   const periodLabel =
@@ -241,7 +258,12 @@ export default function FriendExpensesScreen() {
                   isLast && styles.rowWrapperLast,
                 ]}
               >
-                <ExpenseRow expense={item} now={now} onPress={noop} />
+                <ExpenseRow
+                  expense={item}
+                  now={now}
+                  onPress={noop}
+                  onToggleLike={handleToggleLike}
+                />
               </View>
             );
           }}

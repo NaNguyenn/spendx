@@ -100,6 +100,7 @@ model User {
   receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
   friendshipsAsUserA     Friendship[]    @relation("FriendshipsAsUserA")
   friendshipsAsUserB     Friendship[]    @relation("FriendshipsAsUserB")
+  likes                  Like[]
 
   @@map("users")
 }
@@ -131,6 +132,7 @@ model Expense {
   updatedAt        DateTime          @updatedAt
 
   conversions ExpenseConversion[]
+  likes       Like[]
 
   // Backs "list the owner's own expenses, newest first" (GET /expenses).
   @@index([ownerId, loggedAt])
@@ -234,4 +236,26 @@ model Friendship {
   // already covered by the unique index above.
   @@index([userBId])
   @@map("friendships")
+}
+
+/// A User's endorsement of an Expense they can see (see backend/CONTEXT.md —
+/// Like): visible ⇒ likeable — the count and likers are visible to exactly
+/// those who can see the Expense. The one Visibility check every route
+/// shares lives in LikesService, not here or in the schema; a Like from a
+/// viewer later excluded by a Visibility change deliberately survives —
+/// only `onDelete: Cascade` from User or Expense removes a row, never a
+/// Visibility edit.
+model Like {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenseId String
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, expenseId])
+  // Backs "this Expense's Like count and likers, newest first"
+  // (GET /expenses/:id/likes and the likeCount/likedByViewer enrichment on
+  // ExpenseDto) — userId_expenseId above already covers the reverse lookup.
+  @@index([expenseId])
+  @@map("likes")
 }

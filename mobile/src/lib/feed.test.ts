@@ -19,6 +19,8 @@ function feedItem(overrides: Partial<FeedItemDto> = {}): FeedItemDto {
     visibility: 'public',
     expenseDate: '2026-08-01',
     loggedAt: '2026-08-01T03:00:00.000Z',
+    likeCount: 0,
+    likedByViewer: false,
     owner: { username: 'hnam', displayName: 'Hoàng Nam' },
     ...overrides,
   };

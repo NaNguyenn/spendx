@@ -54,4 +54,16 @@ export class ExpenseDto {
 
   @ApiProperty({ description: 'ISO 8601 — the immutable Logged At.' })
   loggedAt!: string;
+
+  @ApiProperty({
+    description:
+      'The total number of Likes on this Expense (backend/CONTEXT.md — ' +
+      'Like), visible to exactly those who can see the Expense itself.',
+  })
+  likeCount!: number;
+
+  @ApiProperty({
+    description: 'Whether the requesting caller has liked this Expense.',
+  })
+  likedByViewer!: boolean;
 }

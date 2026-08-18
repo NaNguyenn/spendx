@@ -14,6 +14,9 @@ export const vi: Record<TranslationKey, string> = {
   'common.cancel': 'Hủy',
   'common.back': 'Quay lại',
 
+  'like.like': 'Thích',
+  'like.unlike': 'Bỏ thích',
+
   'tab.expenses': 'Chi tiêu',
   'tab.leaderboard': 'Xếp hạng',
   'tab.feed': 'Bảng tin',

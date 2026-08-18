@@ -325,6 +325,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/expenses/{id}/like': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Like an Expense
+     * @description Visible ⇒ likeable (backend/CONTEXT.md — Like): the caller may Like any Expense they can see — their own, any Public Expense, or a Friend's Friend-only Expense. Idempotent: liking an already-liked Expense stays a single Like.
+     */
+    put: operations['LikesController_like'];
+    post?: never;
+    /**
+     * Unlike an Expense
+     * @description Idempotent: 204s even when the caller had not Liked it.
+     */
+    delete: operations['LikesController_unlike'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/expenses/{id}/likes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Who liked this Expense
+     * @description The likers, newest Like first, visible to exactly those who can see the Expense (backend/CONTEXT.md — Like).
+     */
+    get: operations['LikesController_findLikers'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -456,6 +500,10 @@ export interface components {
       expenseDate: string;
       /** @description ISO 8601 — the immutable Logged At. */
       loggedAt: string;
+      /** @description The total number of Likes on this Expense (backend/CONTEXT.md — Like), visible to exactly those who can see the Expense itself. */
+      likeCount: number;
+      /** @description Whether the requesting caller has liked this Expense. */
+      likedByViewer: boolean;
     };
     CategoryTotalDto: {
       category: components['schemas']['Category'];
@@ -587,6 +635,10 @@ export interface components {
       expenseDate: string;
       /** @description ISO 8601 — the immutable Logged At. */
       loggedAt: string;
+      /** @description The total number of Likes on this Expense (backend/CONTEXT.md — Like), visible to exactly those who can see the Expense itself. */
+      likeCount: number;
+      /** @description Whether the requesting caller has liked this Expense. */
+      likedByViewer: boolean;
       owner: components['schemas']['FeedOwnerDto'];
     };
     FeedPageDto: {
@@ -1132,6 +1184,88 @@ export interface operations {
       };
       /** @description Invalid `limit`, or a malformed `cursor`. */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  LikesController_like: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Liked (or already was). */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such Expense, or the caller cannot see it. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  LikesController_unlike: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Unliked (or already was not). */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such Expense, or the caller cannot see it. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  LikesController_findLikers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicUserDto'][];
+        };
+      };
+      /** @description No such Expense, or the caller cannot see it. */
+      404: {
         headers: {
           [name: string]: unknown;
         };

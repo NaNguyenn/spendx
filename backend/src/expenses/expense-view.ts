@@ -2,7 +2,7 @@ import { InternalServerErrorException } from '@nestjs/common';
 import { calendarDateFromDate } from '../domain/calendar-date';
 import type { SupportedCurrency } from '../domain/currency';
 import { ExpenseDto } from './dto/expense.dto';
-import type { ExpenseWithConversions } from './expenses.repository';
+import type { ExpenseWithLikeState } from './expenses.repository';
 
 /**
  * The single place an Expense row becomes a response body: the row plus the
@@ -17,7 +17,7 @@ import type { ExpenseWithConversions } from './expenses.repository';
  * amount without guessing how many decimal places it has.
  */
 export function toExpenseDto(
-  expense: ExpenseWithConversions,
+  expense: ExpenseWithLikeState,
   readerCurrency: SupportedCurrency,
 ): ExpenseDto {
   const converted = expense.conversions.find(
@@ -44,5 +44,7 @@ export function toExpenseDto(
     visibility: expense.visibility,
     expenseDate: calendarDateFromDate(expense.expenseDate),
     loggedAt: expense.loggedAt.toISOString(),
+    likeCount: expense._count.likes,
+    likedByViewer: expense.likes.length > 0,
   };
 }

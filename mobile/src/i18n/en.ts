@@ -21,6 +21,13 @@ export const en = {
   // `common.close`'s "dismiss a sheet" framing.
   'common.back': 'Back',
 
+  // Accessible names for the Like pill (backend/CONTEXT.md's Like entry,
+  // issue #14) — shared by both surfaces that show it (feed-card.tsx,
+  // expense-row.tsx), so unprefixed like `common.*` rather than
+  // screen-namespaced.
+  'like.like': 'Like',
+  'like.unlike': 'Unlike',
+
   'tab.expenses': 'Expenses',
   'tab.leaderboard': 'Leaderboard',
   'tab.feed': 'Feed',

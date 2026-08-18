@@ -18,6 +18,7 @@ import {
   previousIsoWeekOf,
   type DateRange,
 } from '../domain/period';
+import type { Visibility } from '../domain/visibility';
 import { UsersRepository } from '../users/users.repository';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseDto } from './dto/expense.dto';
@@ -76,7 +77,14 @@ export class ExpensesService {
       loggedAt,
     });
 
-    return toExpenseDto(expense, preferredCurrency);
+    // A freshly created Expense cannot have a Like yet — nothing else could
+    // have raced to create one before this response — so the Like state is
+    // hardcoded rather than re-queried (see ExpenseWithLikeState's doc
+    // comment in expenses.repository.ts).
+    return toExpenseDto(
+      { ...expense, _count: { likes: 0 }, likes: [] },
+      preferredCurrency,
+    );
   }
 
   /** The caller's own Expenses (every Visibility), newest logged first. */
@@ -107,6 +115,7 @@ export class ExpensesService {
     const preferredCurrency = await this.preferredCurrencyOf(readerId);
     const expenses = await this.expensesRepository.findShareableByOwner(
       ownerId,
+      readerId,
       {
         start: range?.start ? calendarDateToDate(range.start) : undefined,
         end: range?.end ? calendarDateToDate(range.end) : undefined,
@@ -244,6 +253,20 @@ export class ExpensesService {
         end: calendarDateToDate(range.end),
       },
     );
+  }
+
+  /**
+   * The lean Visibility gate other modules' per-Expense authorization
+   * checks need — currently LikesService's "visible ⇒ likeable" rule
+   * (backend/CONTEXT.md — Like) — without exposing ExpensesRepository or
+   * the full row. `null` for a nonexistent Expense, so a caller's 404 and a
+   * genuinely missing Expense are indistinguishable to them, same as this
+   * service's own `update`/`delete`.
+   */
+  findOwnerAndVisibility(
+    expenseId: string,
+  ): Promise<{ ownerId: string; visibility: Visibility } | null> {
+    return this.expensesRepository.findOwnerAndVisibility(expenseId);
   }
 
   /**
