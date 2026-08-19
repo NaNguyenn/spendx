@@ -34,14 +34,41 @@ const baseEnvSchema = z.object({
   // every boot and cron run, bounding how much a missed run (or a fresh
   // deployment) tries to fetch at once.
   DAILY_RATES_BACKFILL_DAYS: z.coerce.number().int().min(0).default(7),
+
+  // Which SMTP server EmailModule's EMAIL_SENDER (src/email) delivers
+  // through, and the From: header on every message it sends. Left unset
+  // here so the .transform below can default them by NODE_ENV: Mailpit
+  // (compose.yaml) in development/test, nothing in production — a real
+  // relay has no honest default, so production must set these explicitly.
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  EMAIL_FROM: z.string().min(1).optional(),
 });
 
-export const envSchema = baseEnvSchema.transform((env) => ({
-  ...env,
-  DAILY_RATES_PROVIDER:
-    env.DAILY_RATES_PROVIDER ??
-    (env.NODE_ENV === 'production' ? 'exchange-api' : 'stub'),
-}));
+export const envSchema = baseEnvSchema.transform((env, ctx) => {
+  const isProduction = env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    for (const key of ['SMTP_HOST', 'SMTP_PORT', 'EMAIL_FROM'] as const) {
+      if (env[key] === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} has no default in production — set it explicitly (see backend/.env.example).`,
+        });
+      }
+    }
+  }
+
+  return {
+    ...env,
+    DAILY_RATES_PROVIDER:
+      env.DAILY_RATES_PROVIDER ?? (isProduction ? 'exchange-api' : 'stub'),
+    SMTP_HOST: env.SMTP_HOST ?? 'localhost',
+    SMTP_PORT: env.SMTP_PORT ?? 1025,
+    EMAIL_FROM: env.EMAIL_FROM ?? 'spendx <no-reply@spendx.local>',
+  };
+});
 
 export type Env = z.infer<typeof envSchema>;
 

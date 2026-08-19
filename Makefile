@@ -9,8 +9,8 @@ MOBILE := mobile
 
 .DEFAULT_GOAL := help
 .PHONY: help setup hooks require-deps env up down logs psql db-ensure-test migrate \
-        seed db-reset dev mobile openapi api-types contract-check lint typecheck \
-        test test-backend test-mobile check clean
+        seed db-reset dev mobile mail-smoke openapi api-types contract-check lint \
+        typecheck test test-backend test-mobile check clean
 
 help: ## Show this help
 	@grep -hE '^[a-z][a-z-]*:.*?## ' $(MAKEFILE_LIST) \
@@ -81,6 +81,9 @@ dev: require-deps env up migrate ## Start services, migrate, then run the API in
 
 mobile: ## Start the Expo dev server (own terminal — it needs a TTY)
 	npm --prefix $(MOBILE) start
+
+mail-smoke: ## Send one email through EMAIL_SENDER — check Mailpit at :8025
+	npm --prefix $(BACKEND) run email:smoke
 
 ## --- contract ------------------------------------------------------------
 

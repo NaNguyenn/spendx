@@ -12,7 +12,7 @@ A social expense tracker: an Expo app and a NestJS API where every Expense carri
 ```
 backend/    NestJS API — owns the domain model. Prisma + Postgres.
 mobile/     Expo app — presentation only. Consumes the API.
-compose.yaml  Postgres (and, later, object storage + a mail catcher).
+compose.yaml  Postgres, Mailpit (and, later, object storage).
 docs/adr/   Decision records.
 ```
 
@@ -72,6 +72,10 @@ The test database is not a convention you have to remember: `backend/.env.test` 
 ### Configuration
 
 `backend/.env.example` is the complete list of variables, all validated by a zod schema at boot ([`src/config/env.schema.ts`](./backend/src/config/env.schema.ts)). A missing or malformed value stops the process with a message naming it. `make setup` copies the example to `backend/.env`; edit that file, never the example, for local changes.
+
+### Email
+
+Outbound email goes through an `EMAIL_SENDER` seam ([`backend/src/email`](./backend/src/email)): `SmtpEmailSender` delivers via nodemailer to Mailpit locally (SMTP on 1025, web UI at [http://localhost:8025](http://localhost:8025)) and a real relay in production. No application flow sends email yet — this is a prefactor for email verification and password reset. `make mail-smoke` sends one test email and prints where to look for it; e2e tests get a fake sender instead (`test/helpers/email-sender.ts`), so nothing in the suite depends on Mailpit being up.
 
 ### Tests
 

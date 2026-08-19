@@ -23,5 +23,16 @@ services:
       timeout: 3s
       retries: 30
 
+  # SMTP + web UI mail catcher (issue #19). SmtpEmailSender delivers here in
+  # development; nothing is ever really sent. No volume — caught mail is
+  # disposable. CI does not run compose, so nothing in the test suite may
+  # require this container to be up (see FakeEmailSender / EMAIL_SENDER).
+  mailpit:
+    image: axllent/mailpit:v1.30
+    container_name: spendx-mailpit
+    ports:
+      - '1025:1025' # SMTP — matches SMTP_HOST/SMTP_PORT in .env.example
+      - '8025:8025' # Web UI — http://localhost:8025
+
 volumes:
   pgdata:

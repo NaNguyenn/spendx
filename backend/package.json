@@ -27,6 +27,7 @@
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate",
     "openapi:generate": "ts-node src/scripts/generate-openapi.ts && prettier --write openapi.json",
+    "email:smoke": "ts-node src/scripts/smoke-email.ts",
     "api:types": "openapi-typescript openapi.json -o ../mobile/src/api/schema.d.ts && prettier --write ../mobile/src/api/schema.d.ts"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "@prisma/client": "^7.9.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "nodemailer": "^9.0.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "^4.4.3"
@@ -56,6 +58,7 @@
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/supertest": "^7.0.0",
     "dotenv": "^17.4.2",
     "eslint": "^9.18.0",

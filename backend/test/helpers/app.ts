@@ -8,12 +8,15 @@ import {
   DAILY_RATE_PROVIDER,
   type DailyRateProvider,
 } from '../../src/daily-rates/daily-rate-provider';
+import { EMAIL_SENDER, type EmailSender } from '../../src/email/email-sender';
 
 export interface CreateTestAppOptions {
   /** Overrides the CLOCK provider — see `helpers/clock.ts`. */
   clock?: Clock;
   /** Overrides the DAILY_RATE_PROVIDER provider — see `helpers/daily-rate-provider.ts`. */
   dailyRateProvider?: DailyRateProvider;
+  /** Overrides the EMAIL_SENDER provider — see `helpers/email-sender.ts`. */
+  emailSender?: EmailSender;
 }
 
 /**
@@ -35,6 +38,9 @@ export async function createTestApp(
     builder
       .overrideProvider(DAILY_RATE_PROVIDER)
       .useValue(options.dailyRateProvider);
+  }
+  if (options.emailSender) {
+    builder.overrideProvider(EMAIL_SENDER).useValue(options.emailSender);
   }
 
   const moduleRef = await builder.compile();
