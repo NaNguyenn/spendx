@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -39,17 +40,24 @@ export class UsersController {
     return this.usersService.updateMe(userId, dto);
   }
 
-  // When Blocks arrive, this becomes a query surface they must filter: per
-  // ADR-0003 and CONTEXT.md, a Block makes two Users mutually invisible
-  // everywhere, search included. Today there is no Block to apply; the ticket
-  // that adds one has to come back here.
+  // Block-filtered (backend/CONTEXT.md — Block, issue #15): a Block between
+  // the caller and the target, either direction, 404s identically to an
+  // unknown Username — see UsersService.getPublicProfile.
   @Get(':username')
   @ApiOperation({
     summary: 'Look up a User by Username',
     description: 'Exact match only — see backend/CONTEXT.md on Username.',
   })
   @ApiOkResponse({ type: PublicUserDto })
-  getByUsername(@Param('username') username: string): Promise<PublicUserDto> {
-    return this.usersService.getPublicProfile(username);
+  @ApiNotFoundResponse({
+    description:
+      'Unknown Username, or a Block exists between the caller and the ' +
+      'target, either direction (same response either way — no signal).',
+  })
+  getByUsername(
+    @CurrentUserId() viewerId: string,
+    @Param('username') username: string,
+  ): Promise<PublicUserDto> {
+    return this.usersService.getPublicProfile(viewerId, username);
   }
 }

@@ -342,5 +342,43 @@ describe('users', () => {
         .get(`/users/${target.username}`)
         .expect(401);
     });
+
+    it('404s the same as an unknown Username when the caller blocked the target', async () => {
+      const { response: viewerSignUp } = await signUp(app);
+      const { body: target } = await signUp(app, { username: 'blockedtarget' });
+      const viewerToken = authBody(viewerSignUp).accessToken;
+
+      await request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .send({ username: target.username });
+
+      const response = await request(app.getHttpServer())
+        .get(`/users/${target.username}`)
+        .set('Authorization', `Bearer ${viewerToken}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('404s the same as an unknown Username when the target blocked the caller', async () => {
+      const { response: viewerSignUp } = await signUp(app);
+      const { response: targetSignUp, body: target } = await signUp(app, {
+        username: 'blockerofviewer',
+      });
+      const viewerToken = authBody(viewerSignUp).accessToken;
+      const targetToken = authBody(targetSignUp).accessToken;
+      const viewerUsername = authBody(viewerSignUp).user.username;
+
+      await request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${targetToken}`)
+        .send({ username: viewerUsername });
+
+      const response = await request(app.getHttpServer())
+        .get(`/users/${target.username}`)
+        .set('Authorization', `Bearer ${viewerToken}`);
+
+      expect(response.status).toBe(404);
+    });
   });
 });

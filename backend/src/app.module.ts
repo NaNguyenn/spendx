@@ -8,6 +8,7 @@ import {
   skipUnlessAuthRateLimited,
 } from './auth/auth-rate-limit.decorator';
 import { AuthModule } from './auth/auth.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { AppConfigModule } from './config/config.module';
 import type { Env } from './config/env.schema';
 import { ExpensesModule } from './expenses/expenses.module';
@@ -47,6 +48,7 @@ import { UsersModule } from './users/users.module';
     }),
     PrismaModule,
     HealthModule,
+    BlocksModule,
     UsersModule,
     AuthModule,
     ExpensesModule,

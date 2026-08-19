@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { fetchBlockedUsers } from '@/api/blocks';
 import { useSession } from '@/auth/session-context';
 import { TAB_BAR_INSET } from '@/components/app-tabs';
 import { FormError } from '@/components/auth/auth-screen';
@@ -21,8 +23,9 @@ import { currencySymbol } from '@/lib/format';
 import { localeDisplayName, type SupportedLocale } from '@/lib/locale';
 
 export default function ProfileScreen() {
-  const { user, signOut, updateMe } = useSession();
+  const { user, token, signOut, updateMe } = useSession();
   const theme = useTheme();
+  const router = useRouter();
   const { locale: activeLocale, t } = useTranslation();
 
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
@@ -32,6 +35,30 @@ export default function ProfileScreen() {
   const [isLocalePickerOpen, setIsLocalePickerOpen] = useState(false);
   const [isUpdatingLocale, setIsUpdatingLocale] = useState(false);
   const [localeError, setLocaleError] = useState<string | null>(null);
+
+  // The SAFETY row's own count (design's `R4sJ3j`, "V" = "2") — fetched on
+  // every focus, same as every other data-loading screen's `useFocusEffect`,
+  // so it's current again the moment a Block/Unblock made elsewhere (Feed,
+  // the friend drill-down, or Blocked Accounts itself) brings this tab back
+  // into view. `null` until the first load resolves; the row shows "…"
+  // rather than a wrong number in that gap.
+  const [blockedCount, setBlockedCount] = useState<number | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      void (async () => {
+        try {
+          const blocked = await fetchBlockedUsers(token);
+          setBlockedCount(blocked.length);
+        } catch {
+          // Silent — this is a secondary count, not the screen's own load;
+          // a stale/missing number here isn't worth an error banner over
+          // the rest of a working Profile tab. It corrects itself next focus.
+        }
+      })();
+    }, [token]),
+  );
 
   // Stack.Protected only mounts this route while signed in, but the type
   // stays nullable — guard defensively for the moment of sign-out itself.
@@ -125,6 +152,17 @@ export default function ProfileScreen() {
     },
   ];
 
+  const safetyRows: ProfileRowItem[] = [
+    {
+      key: 'blockedAccounts',
+      icon: { ios: 'nosign', android: 'block', web: 'block' },
+      label: t('profile.blockedAccounts'),
+      value: blockedCount === null ? '…' : String(blockedCount),
+      onPress: () => router.push('/blocked-accounts'),
+      tone: 'danger',
+    },
+  ];
+
   return (
     <SafeAreaView
       style={[styles.flex, { backgroundColor: theme.background }]}
@@ -152,6 +190,7 @@ export default function ProfileScreen() {
         <FormError message={currencyError} />
         <FormError message={localeError} />
         <ProfileSection caption={t('profile.account')} rows={accountRows} />
+        <ProfileSection caption={t('profile.safety')} rows={safetyRows} />
 
         <Pressable
           onPress={signOut}

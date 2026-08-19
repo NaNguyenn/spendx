@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service';
 import { CLOCK, type Clock } from '../clock/clock';
 import { ConversionService } from '../daily-rates/conversion.service';
 import {
@@ -44,6 +45,7 @@ export class ExpensesService {
     private readonly expensesRepository: ExpensesRepository,
     private readonly usersRepository: UsersRepository,
     private readonly conversionService: ConversionService,
+    private readonly blocksService: BlocksService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -87,10 +89,20 @@ export class ExpensesService {
     );
   }
 
-  /** The caller's own Expenses (every Visibility), newest logged first. */
+  /**
+   * The caller's own Expenses (every Visibility), newest logged first. Each
+   * `likeCount` excludes Likes from a User mutually invisible with the
+   * owner (backend/CONTEXT.md — Block, issue #15).
+   */
   async findAllForOwner(ownerId: string): Promise<ExpenseDto[]> {
-    const preferredCurrency = await this.preferredCurrencyOf(ownerId);
-    const expenses = await this.expensesRepository.findAllByOwner(ownerId);
+    const [preferredCurrency, excludeLikerIds] = await Promise.all([
+      this.preferredCurrencyOf(ownerId),
+      this.blocksService.invisibleUserIdsFor(ownerId),
+    ]);
+    const expenses = await this.expensesRepository.findAllByOwner(
+      ownerId,
+      excludeLikerIds,
+    );
     return expenses.map((expense) => toExpenseDto(expense, preferredCurrency));
   }
 
@@ -105,14 +117,21 @@ export class ExpensesService {
    * the time this is called the caller is already known to be entitled.
    *
    * `range` optionally narrows to Expense Date (issue #12's Leaderboard
-   * drill-down); each bound is independent and inclusive.
+   * drill-down); each bound is independent and inclusive. Each `likeCount`
+   * excludes Likes from a User mutually invisible with `readerId`
+   * (backend/CONTEXT.md — Block, issue #15) — the caller is already known
+   * not to be blocked by/blocking `ownerId` themselves by this point (see
+   * FriendshipsService.getFriendExpenses).
    */
   async findShareableForOwner(
     ownerId: string,
     readerId: string,
     range?: CalendarDateRangeFilter,
   ): Promise<ExpenseDto[]> {
-    const preferredCurrency = await this.preferredCurrencyOf(readerId);
+    const [preferredCurrency, excludeLikerIds] = await Promise.all([
+      this.preferredCurrencyOf(readerId),
+      this.blocksService.invisibleUserIdsFor(readerId),
+    ]);
     const expenses = await this.expensesRepository.findShareableByOwner(
       ownerId,
       readerId,
@@ -120,6 +139,7 @@ export class ExpensesService {
         start: range?.start ? calendarDateToDate(range.start) : undefined,
         end: range?.end ? calendarDateToDate(range.end) : undefined,
       },
+      excludeLikerIds,
     );
     return expenses.map((expense) => toExpenseDto(expense, preferredCurrency));
   }
@@ -136,7 +156,10 @@ export class ExpensesService {
     expenseId: string,
     dto: UpdateExpenseDto,
   ): Promise<ExpenseDto> {
-    const preferredCurrency = await this.preferredCurrencyOf(ownerId);
+    const [preferredCurrency, excludeLikerIds] = await Promise.all([
+      this.preferredCurrencyOf(ownerId),
+      this.blocksService.invisibleUserIdsFor(ownerId),
+    ]);
 
     // Owner-scoped in the query itself: a stranger's Expense and a
     // nonexistent one are deliberately the same 404 — a probe learns
@@ -152,6 +175,7 @@ export class ExpensesService {
           ? calendarDateToDate(dto.expenseDate)
           : undefined,
       },
+      excludeLikerIds,
     );
     if (!updated) {
       throw new NotFoundException('Expense not found');

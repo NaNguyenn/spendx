@@ -233,6 +233,46 @@ describe('feed', () => {
     expect(eurPage.items[0].convertedAmount).toBe('9.0000');
   });
 
+  it('(h) excludes Public Expenses from a User the viewer blocked', async () => {
+    await seedVndRates();
+    const owner = await newActor();
+    const viewer = await newActor();
+    await createExpense(app, owner.token, {
+      description: 'blocked owner public spend',
+      visibility: 'public',
+      expenseDate: LOGGING_DATE,
+    });
+
+    await request(app.getHttpServer())
+      .post('/blocks')
+      .set('Authorization', `Bearer ${viewer.token}`)
+      .send({ username: owner.username });
+
+    const page = feedPageBody(await getFeed(viewer));
+
+    expect(page.items).toEqual([]);
+  });
+
+  it('(i) excludes Public Expenses from a User who blocked the viewer', async () => {
+    await seedVndRates();
+    const owner = await newActor();
+    const viewer = await newActor();
+    await createExpense(app, owner.token, {
+      description: 'blocker owner public spend',
+      visibility: 'public',
+      expenseDate: LOGGING_DATE,
+    });
+
+    await request(app.getHttpServer())
+      .post('/blocks')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ username: viewer.username });
+
+    const page = feedPageBody(await getFeed(viewer));
+
+    expect(page.items).toEqual([]);
+  });
+
   describe('(f) limit and cursor validation', () => {
     it('400s on limit=0', async () => {
       const viewer = await newActor();

@@ -24,6 +24,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/blocks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The caller's blocked list
+     * @description Newest first.
+     */
+    get: operations['BlocksController_findAll'];
+    put?: never;
+    /**
+     * Block a User
+     * @description See backend/CONTEXT.md — Block.
+     */
+    post: operations['BlocksController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/blocks/{username}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Unblock a User
+     * @description Restores visibility both ways, but not any severed Friendship — see backend/CONTEXT.md — Block.
+     */
+    delete: operations['BlocksController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/users/me': {
     parameters: {
       query?: never;
@@ -397,6 +441,25 @@ export interface components {
        */
       database: 'down';
     };
+    CreateBlockDto: {
+      /**
+       * @description The Username to Block — exact match only, same as GET /users/:username (see backend/CONTEXT.md — Username).
+       * @example minhtran
+       */
+      username: string;
+    };
+    PublicUserDto: {
+      id: string;
+      /** @description The User's unique public handle. */
+      username: string;
+      displayName: string;
+    };
+    BlockDto: {
+      id: string;
+      blockedUser: components['schemas']['PublicUserDto'];
+      /** @description ISO 8601 */
+      createdAt: string;
+    };
     /** @enum {string} */
     SupportedCurrency:
       | 'VND'
@@ -425,12 +488,6 @@ export interface components {
     UpdateMeDto: {
       preferredCurrency?: components['schemas']['SupportedCurrency'];
       locale?: components['schemas']['Locale'];
-    };
-    PublicUserDto: {
-      id: string;
-      /** @description The User's unique public handle. */
-      username: string;
-      displayName: string;
     };
     SignUpDto: {
       /** @example minh@spendx.app */
@@ -682,6 +739,96 @@ export interface operations {
       };
     };
   };
+  BlocksController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicUserDto'][];
+        };
+      };
+    };
+  };
+  BlocksController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateBlockDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BlockDto'];
+        };
+      };
+      /** @description Blocking yourself. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unknown Username, or the target has already blocked the caller (same response either way — no signal). */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Already blocked. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  BlocksController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        username: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Unblocked. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such Block. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   UsersController_getMe: {
     parameters: {
       query?: never;
@@ -742,6 +889,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['PublicUserDto'];
         };
+      };
+      /** @description Unknown Username, or a Block exists between the caller and the target, either direction (same response either way — no signal). */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

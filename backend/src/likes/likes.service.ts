@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service';
 import { ExpensesService } from '../expenses/expenses.service';
 import { FriendshipsService } from '../friends/friendships.service';
 import { PublicUserDto } from '../users/dto/public-user.dto';
@@ -11,6 +12,7 @@ export class LikesService {
     private readonly likesRepository: LikesRepository,
     private readonly expensesService: ExpensesService,
     private readonly friendshipsService: FriendshipsService,
+    private readonly blocksService: BlocksService,
   ) {}
 
   /** Likes an Expense the caller can see. Idempotent. */
@@ -25,13 +27,22 @@ export class LikesService {
     await this.likesRepository.unlike(viewerId, expenseId);
   }
 
-  /** The Expense's likers, newest Like first — same Visibility gate as {@link like}. */
+  /**
+   * The Expense's likers, newest Like first — same Visibility gate as
+   * {@link like}, minus any liker mutually invisible with the viewer
+   * (backend/CONTEXT.md — Block, issue #15).
+   */
   async listLikers(
     viewerId: string,
     expenseId: string,
   ): Promise<PublicUserDto[]> {
     await this.assertVisible(viewerId, expenseId);
-    const likers = await this.likesRepository.findLikers(expenseId);
+    const excludeUserIds =
+      await this.blocksService.invisibleUserIdsFor(viewerId);
+    const likers = await this.likesRepository.findLikers(
+      expenseId,
+      excludeUserIds,
+    );
     return likers.map(toPublicUser);
   }
 
@@ -53,6 +64,12 @@ export class LikesService {
    * an individual Expense, so a 403 here would itself leak that a
    * private/friend-only Expense exists at that id; only 404 keeps
    * invisibility indistinguishable from nonexistence.
+   *
+   * A Block between the viewer and the owner, either direction
+   * (backend/CONTEXT.md — Block, issue #15), makes the Expense invisible
+   * the same way — "liking it is impossible" — checked before the owner
+   * can even equal the viewer's own id, since a User cannot Block
+   * themselves.
    */
   private async assertVisible(
     viewerId: string,
@@ -61,6 +78,15 @@ export class LikesService {
     const expense =
       await this.expensesService.findOwnerAndVisibility(expenseId);
     if (!expense) {
+      throw new NotFoundException('Expense not found');
+    }
+    if (
+      expense.ownerId !== viewerId &&
+      (await this.blocksService.isBlockedEitherDirection(
+        viewerId,
+        expense.ownerId,
+      ))
+    ) {
       throw new NotFoundException('Expense not found');
     }
 

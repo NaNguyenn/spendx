@@ -31,10 +31,18 @@ export type ExpenseWithLikeState = ExpenseWithConversions & {
   likes: { userId: string }[];
 };
 
-/** The `include` shared by every read that needs `likeCount`/`likedByViewer`. */
-function likeStateInclude(viewerId: string) {
+/**
+ * The `include` shared by every read that needs `likeCount`/`likedByViewer`.
+ * `excludeLikerIds` (backend/CONTEXT.md — Block, issue #15 — from
+ * BlocksService.invisibleUserIdsFor(viewerId)) drops any Like from a User
+ * mutually invisible with `viewerId` out of `likeCount`; an empty array
+ * filters nothing, so callers with no Blocks pay no extra cost.
+ */
+function likeStateInclude(viewerId: string, excludeLikerIds: string[]) {
   return {
-    _count: { select: { likes: true } },
+    _count: {
+      select: { likes: { where: { userId: { notIn: excludeLikerIds } } } },
+    },
     likes: { where: { userId: viewerId }, select: { userId: true } },
   } as const;
 }
@@ -111,13 +119,19 @@ export class ExpensesRepository {
    * The owner's own Expenses (every Visibility), newest logged first. The
    * viewer is always the owner here, so the Like state is filtered to
    * `ownerId` too — an owner can Like their own Expense (backend/CONTEXT.md
-   * — Like).
+   * — Like). `excludeLikerIds` — see {@link likeStateInclude}.
    */
-  findAllByOwner(ownerId: string): Promise<ExpenseWithLikeState[]> {
+  findAllByOwner(
+    ownerId: string,
+    excludeLikerIds: string[],
+  ): Promise<ExpenseWithLikeState[]> {
     return this.prisma.expense.findMany({
       where: { ownerId },
       orderBy: { loggedAt: 'desc' },
-      include: { conversions: true, ...likeStateInclude(ownerId) },
+      include: {
+        conversions: true,
+        ...likeStateInclude(ownerId, excludeLikerIds),
+      },
     });
   }
 
@@ -133,12 +147,14 @@ export class ExpensesRepository {
    *
    * `readerId` is the viewer — distinct from `ownerId` here, unlike
    * {@link findAllByOwner} — so the Like state is filtered to the reader's
-   * own Like, not the owner's.
+   * own Like, not the owner's. `excludeLikerIds` — see
+   * {@link likeStateInclude}.
    */
   findShareableByOwner(
     ownerId: string,
     readerId: string,
-    range?: ExpenseDateRangeFilter,
+    range: ExpenseDateRangeFilter | undefined,
+    excludeLikerIds: string[],
   ): Promise<ExpenseWithLikeState[]> {
     return this.prisma.expense.findMany({
       where: {
@@ -149,7 +165,10 @@ export class ExpensesRepository {
           : {}),
       },
       orderBy: { loggedAt: 'desc' },
-      include: { conversions: true, ...likeStateInclude(readerId) },
+      include: {
+        conversions: true,
+        ...likeStateInclude(readerId, excludeLikerIds),
+      },
     });
   }
 
@@ -193,12 +212,16 @@ export class ExpensesRepository {
     id: string,
     ownerId: string,
     data: UpdateExpenseData,
+    excludeLikerIds: string[],
   ): Promise<ExpenseWithLikeState | null> {
     try {
       return await this.prisma.expense.update({
         where: { id, ownerId },
         data,
-        include: { conversions: true, ...likeStateInclude(ownerId) },
+        include: {
+          conversions: true,
+          ...likeStateInclude(ownerId, excludeLikerIds),
+        },
       });
     } catch (error) {
       // P2025: no row matched the filter — the not-found this method's

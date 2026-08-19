@@ -32,6 +32,109 @@
         "tags": ["health"]
       }
     },
+    "/blocks": {
+      "post": {
+        "description": "See backend/CONTEXT.md — Block.",
+        "operationId": "BlocksController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBlockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Blocking yourself."
+          },
+          "404": {
+            "description": "Unknown Username, or the target has already blocked the caller (same response either way — no signal)."
+          },
+          "409": {
+            "description": "Already blocked."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Block a User",
+        "tags": ["blocks"]
+      },
+      "get": {
+        "description": "Newest first.",
+        "operationId": "BlocksController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUserDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's blocked list",
+        "tags": ["blocks"]
+      }
+    },
+    "/blocks/{username}": {
+      "delete": {
+        "description": "Restores visibility both ways, but not any severed Friendship — see backend/CONTEXT.md — Block.",
+        "operationId": "BlocksController_remove",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unblocked."
+          },
+          "404": {
+            "description": "No such Block."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unblock a User",
+        "tags": ["blocks"]
+      }
+    },
     "/users/me": {
       "get": {
         "operationId": "UsersController_getMe",
@@ -114,6 +217,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Unknown Username, or a Block exists between the caller and the target, either direction (same response either way — no signal)."
           }
         },
         "security": [
@@ -869,6 +975,49 @@
         },
         "required": ["status", "database"]
       },
+      "CreateBlockDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "minhtran",
+            "description": "The Username to Block — exact match only, same as GET /users/:username (see backend/CONTEXT.md — Username)."
+          }
+        },
+        "required": ["username"]
+      },
+      "PublicUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "description": "The User's unique public handle."
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "username", "displayName"]
+      },
+      "BlockDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "blockedUser": {
+            "$ref": "#/components/schemas/PublicUserDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601"
+          }
+        },
+        "required": ["id", "blockedUser", "createdAt"]
+      },
       "SupportedCurrency": {
         "type": "string",
         "enum": [
@@ -951,22 +1100,6 @@
             ]
           }
         }
-      },
-      "PublicUserDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "username": {
-            "type": "string",
-            "description": "The User's unique public handle."
-          },
-          "displayName": {
-            "type": "string"
-          }
-        },
-        "required": ["id", "username", "displayName"]
       },
       "SignUpDto": {
         "type": "object",

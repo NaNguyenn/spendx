@@ -20,6 +20,14 @@ export interface ProfileRowItem {
   /** Present only for rows this ticket makes editable (currently just Language) — see profile.tsx. */
   onPress?: () => void;
   disabled?: boolean;
+  /**
+   * `'danger'` colors the icon disc danger-soft/danger instead of the
+   * default surface-2/text-secondary — the SAFETY section's "Blocked
+   * accounts" row (design's `R4sJ3j`, issue #15) is the one row that opts
+   * in, matching the same red the Blocked Accounts screen itself uses for
+   * its Block iconography.
+   */
+  tone?: 'default' | 'danger';
 }
 
 interface ProfileSectionProps {
@@ -50,6 +58,7 @@ export function ProfileSection({ caption, rows }: ProfileSectionProps) {
               value={row.value}
               onPress={row.onPress}
               disabled={row.disabled}
+              tone={row.tone}
             />
           </Fragment>
         ))}
@@ -64,19 +73,33 @@ function ProfileRow({
   value,
   onPress,
   disabled,
+  tone = 'default',
 }: {
   icon: SymbolViewProps['name'];
   label: string;
   value: ReactNode;
   onPress?: () => void;
   disabled?: boolean;
+  tone?: 'default' | 'danger';
 }) {
   const theme = useTheme();
 
   const content = (
     <>
-      <View style={[styles.iconDisc, { backgroundColor: theme.surface2 }]}>
-        <SymbolView name={icon} size={16} tintColor={theme.textSecondary} />
+      <View
+        style={[
+          styles.iconDisc,
+          {
+            backgroundColor:
+              tone === 'danger' ? theme.dangerSoft : theme.surface2,
+          },
+        ]}
+      >
+        <SymbolView
+          name={icon}
+          size={16}
+          tintColor={tone === 'danger' ? theme.danger : theme.textSecondary}
+        />
       </View>
       <ThemedText style={styles.rowLabel}>{label}</ThemedText>
       <ThemedText

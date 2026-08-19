@@ -30,10 +30,17 @@ export class LikesRepository {
     await this.prisma.like.deleteMany({ where: { userId, expenseId } });
   }
 
-  /** The Expense's likers, newest Like first — backs GET /expenses/:id/likes. */
-  async findLikers(expenseId: string): Promise<User[]> {
+  /**
+   * The Expense's likers, newest Like first — backs GET /expenses/:id/likes.
+   * `excludeUserIds` (backend/CONTEXT.md — Block, issue #15) drops any liker
+   * mutually invisible with the viewer, same as their `likeCount`.
+   */
+  async findLikers(
+    expenseId: string,
+    excludeUserIds: string[],
+  ): Promise<User[]> {
     const rows = await this.prisma.like.findMany({
-      where: { expenseId },
+      where: { expenseId, userId: { notIn: excludeUserIds } },
       orderBy: { createdAt: 'desc' },
       include: { user: true },
     });

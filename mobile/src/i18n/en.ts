@@ -28,6 +28,18 @@ export const en = {
   'like.like': 'Like',
   'like.unlike': 'Unlike',
 
+  // Block (backend/CONTEXT.md's Block entry, issue #15) — shared across
+  // every surface that can trigger it (feed-card.tsx's Block circle,
+  // friend/[username].tsx's header button), same unprefixed shape as
+  // `like.*` above.
+  'block.action': 'Block',
+  // {name} — see leaderboard.friends.unfriendConfirmTitle's own note on why
+  // the param goes on this key and not the message below.
+  'block.confirmTitle': 'Block {name}?',
+  'block.confirmMessage':
+    "Neither of you will see the other's content anywhere, and any friendship between you ends. They won't be notified.",
+  'block.confirm': 'Block',
+
   'tab.expenses': 'Expenses',
   'tab.leaderboard': 'Leaderboard',
   'tab.feed': 'Feed',
@@ -193,7 +205,23 @@ export const en = {
   'profile.displayName': 'Display name',
   'profile.username': 'Username',
   'profile.email': 'Email',
+  // SAFETY section (design's `fOHsj`, issue #15) — its one row today.
+  'profile.safety': 'Safety',
+  'profile.blockedAccounts': 'Blocked accounts',
   'profile.signOut': 'Sign out',
+
+  // Blocked Accounts screen (app/blocked-accounts.tsx, issue #15).
+  'blockedAccounts.title': 'Blocked accounts',
+  // {count} — see leaderboard's own FRIEND REQUESTS · {count} keys for the
+  // same "no singular/plural special-casing" convention this app already
+  // uses for a bare count.
+  'blockedAccounts.count': '{count} accounts',
+  'blockedAccounts.info':
+    'Blocked people disappear from your Feed and Leaderboard, and you disappear from theirs.',
+  'blockedAccounts.retry': 'Try again',
+  'blockedAccounts.unblock': 'Unblock',
+  'blockedAccounts.empty.title': 'No blocked accounts',
+  'blockedAccounts.empty.note': 'Accounts you block will show up here.',
 
   'auth.or': 'or',
 

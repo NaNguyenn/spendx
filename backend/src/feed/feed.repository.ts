@@ -18,9 +18,10 @@ export type FeedExpense = Expense & {
 
 /**
  * Persistence behind the Feed (backend/CONTEXT.md — Feed; issue #13): every
- * Public Expense app-wide, newest first by Logged At. Block filtering
- * (backend/CONTEXT.md — Block, issue #15) is not applied here yet — every
- * Public Expense is visible to every caller until that lands.
+ * Public Expense app-wide, newest first by Logged At, minus Block filtering
+ * (backend/CONTEXT.md — Block, issue #15) — an Expense owned by a User the
+ * viewer is mutually invisible with never appears, and neither does a Like
+ * from one on an Expense that does.
  */
 @Injectable()
 export class FeedRepository {
@@ -36,15 +37,22 @@ export class FeedRepository {
    * Callers decide `take` — see `feed.service.ts`, which fetches one extra
    * row to know whether a `nextCursor` exists. `viewerId` filters the Like
    * aggregate to that one viewer (backend/CONTEXT.md — Like).
+   *
+   * `invisibleOwnerIds` (from BlocksService.invisibleUserIdsFor(viewerId))
+   * excludes their Expenses outright and excludes their Likes from every
+   * remaining Expense's `likeCount` — the same set serves both, since a
+   * blocked-either-direction User's Likes are as invisible as their content.
    */
   findPage(
     cursor: FeedCursor | undefined,
     take: number,
     viewerId: string,
+    invisibleOwnerIds: string[],
   ): Promise<FeedExpense[]> {
     return this.prisma.expense.findMany({
       where: {
         visibility: 'public',
+        ownerId: { notIn: invisibleOwnerIds },
         ...(cursor
           ? {
               OR: [
@@ -59,7 +67,11 @@ export class FeedRepository {
       include: {
         conversions: true,
         owner: { select: { username: true, displayName: true } },
-        _count: { select: { likes: true } },
+        _count: {
+          select: {
+            likes: { where: { userId: { notIn: invisibleOwnerIds } } },
+          },
+        },
         likes: { where: { userId: viewerId }, select: { userId: true } },
       },
     });

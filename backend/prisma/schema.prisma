@@ -101,6 +101,8 @@ model User {
   friendshipsAsUserA     Friendship[]    @relation("FriendshipsAsUserA")
   friendshipsAsUserB     Friendship[]    @relation("FriendshipsAsUserB")
   likes                  Like[]
+  blocksMade             Block[]         @relation("BlocksMade")
+  blocksReceived         Block[]         @relation("BlocksReceived")
 
   @@map("users")
 }
@@ -258,4 +260,31 @@ model Like {
   // ExpenseDto) — userId_expenseId above already covers the reverse lookup.
   @@index([expenseId])
   @@map("likes")
+}
+
+/// Full mutual invisibility between two Users, initiated by one of them (see
+/// backend/CONTEXT.md — Block): neither sees the other's content anywhere,
+/// neither can send a Friend Request, and any existing Friendship is
+/// severed. Directional — `blockerId` is who initiated it and owns the
+/// blocked-list entry (only they may see it via GET /blocks or remove it via
+/// DELETE /blocks/:username) — but the filter it drives
+/// (BlocksRepository.invisibleUserIdsFor) is applied both ways: a Block row
+/// makes each side invisible to the other, regardless of who blocked whom.
+/// `onDelete: Cascade` on both sides — a deleted account takes every Block
+/// naming it with it, same as every other social-graph model here.
+model Block {
+  id        String @id @default(uuid(7))
+  blockerId String
+  blocker   User   @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User   @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  // Backs the reverse-direction half of "invisible to viewer X": rows where
+  // X is the one blocked. blockerId is already covered by the unique index
+  // above.
+  @@index([blockedId])
+  @@map("blocks")
 }

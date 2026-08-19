@@ -1,6 +1,6 @@
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { FeedItemDto } from '@/api/feed';
 import { VisibilityBadge } from '@/components/expenses/visibility-badge';
@@ -13,6 +13,17 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { formatExpenseAmount } from '@/lib/amount-input';
 import { formatRelativeTime } from '@/lib/format';
+
+// Design's `ban` (lucide) — SF Symbols' closest built-in equivalent is the
+// "no entry" circle-slash, `nosign`; Material's is `block`, already the
+// vocabulary this app uses for the concept (constants aren't shared with
+// profile.tsx's own copy since each is a single-use module-local constant,
+// same as every other icon in this file's sibling components).
+const BLOCK_ICON: SymbolViewProps['name'] = {
+  ios: 'nosign',
+  android: 'block',
+  web: 'block',
+};
 
 interface FeedCardProps {
   item: FeedItemDto;
@@ -33,6 +44,13 @@ interface FeedCardProps {
    * `likeCount` currently say.
    */
   onToggleLike: (item: FeedItemDto) => void;
+  /**
+   * Tap the Block circle → the parent confirms and calls `POST /blocks`
+   * (issue #15). Takes the item for the same "one stable callback, not a
+   * closure per card" reason as `onToggleLike`; the confirmation dialog and
+   * the API call both live in feed.tsx, not here.
+   */
+  onBlock: (item: FeedItemDto) => void;
 }
 
 /**
@@ -43,16 +61,17 @@ interface FeedCardProps {
  * reason ExpenseRow is — an infinite-scroll list that only grows, never
  * shrinks.
  *
- * Three deliberate divergences from the mock (mobile/CONTEXT.md's "say which
+ * Two deliberate divergences from the mock (mobile/CONTEXT.md's "say which
  * one wins" rule):
  *  - The mock's Original line reads "$48.65 · rate 25.694"; the rate never
  *    crosses the wire (ADR-0008), so this shows the Original Amount only,
  *    and omits the line entirely when it would just repeat the Converted
  *    Amount (same currency both sides) — identical rule to expense-row.tsx.
- *  - The Actions row (`r6xr9`) ships with only its Left/Like pill (`VI6RZ`):
- *    Report and Block (`AnppS`/`GiaGl`) are issues #15/#16, still left out
- *    entirely, not stubbed. The Attachment image slot is issue #10, same
- *    treatment.
+ *  - The Actions row (`r6xr9`) ships with its Left/Like pill (`VI6RZ`) and
+ *    Right/Block circle (`GiaGl`, issue #15). Report (`AnppS`) is issue #16,
+ *    still left out entirely, not stubbed — so the Right group here holds
+ *    only Block, not Report+Block side by side as the mock draws. The
+ *    Attachment image slot is issue #10, same left-out treatment.
  *  - The Like pill itself (`VI6RZ`, including its unliked-state
  *    extrapolation) is `components/like-pill.tsx` — see that file's doc
  *    comment.
@@ -61,6 +80,7 @@ export const FeedCard = memo(function FeedCard({
   item,
   now,
   onToggleLike,
+  onBlock,
 }: FeedCardProps) {
   const theme = useTheme();
   const { t, locale } = useTranslation();
@@ -151,6 +171,22 @@ export const FeedCard = memo(function FeedCard({
           likedByViewer={item.likedByViewer}
           onPress={() => onToggleLike(item)}
         />
+        <Pressable
+          onPress={() => onBlock(item)}
+          accessibilityRole="button"
+          accessibilityLabel={t('block.action')}
+          style={({ pressed }) => [
+            styles.blockButton,
+            { backgroundColor: theme.surface2 },
+            pressed && styles.pressed,
+          ]}
+        >
+          <SymbolView
+            name={BLOCK_ICON}
+            size={15}
+            tintColor={theme.textTertiary}
+          />
+        </Pressable>
       </View>
     </View>
   );
@@ -217,5 +253,16 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  blockButton: {
+    width: 32,
+    height: 32,
+    borderRadius: Radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.6,
   },
 });

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BlocksModule } from '../blocks/blocks.module';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
@@ -12,11 +13,13 @@ import { UserExpensesController } from './user-expenses.controller';
 
 // The Friendship graph (backend/CONTEXT.md — Friendship, Friend Request):
 // Friend Requests, Friendships, and the Friend-gated Expenses read path.
-// Depends on UsersModule (Username lookup) and ExpensesModule (the
-// Shareable Expenses read path) through providers those modules export
-// (see rules/arch-module-sharing.md).
+// Depends on UsersModule (Username lookup), ExpensesModule (the
+// Shareable Expenses read path) and BlocksModule (backend/CONTEXT.md —
+// Block: no Friend Request across a Block, and the read path 404s exactly
+// like GET /users/:username when the pair is blocked) through providers
+// those modules export (see rules/arch-module-sharing.md).
 @Module({
-  imports: [PrismaModule, UsersModule, ExpensesModule],
+  imports: [PrismaModule, UsersModule, ExpensesModule, BlocksModule],
   controllers: [
     FriendRequestsController,
     FriendshipsController,

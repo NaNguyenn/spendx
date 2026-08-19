@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service';
 import { PublicUserDto } from '../users/dto/public-user.dto';
 import { toPublicUser } from '../users/user-view';
 import { UsersRepository } from '../users/users.repository';
@@ -19,6 +20,7 @@ export class FriendRequestsService {
     private readonly friendRequestsRepository: FriendRequestsRepository,
     private readonly friendshipsRepository: FriendshipsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly blocksService: BlocksService,
   ) {}
 
   /**
@@ -35,6 +37,15 @@ export class FriendRequestsService {
     }
     if (recipient.id === senderId) {
       throw new BadRequestException('Cannot send a Friend Request to yourself');
+    }
+
+    // backend/CONTEXT.md — Block: "neither can send a Friend Request" — 404s
+    // identically to an unknown Username, same as GET /users/:username, no
+    // signal for either direction.
+    if (
+      await this.blocksService.isBlockedEitherDirection(senderId, recipient.id)
+    ) {
+      throw new NotFoundException('User not found');
     }
 
     const alreadyFriends = await this.friendshipsRepository.areFriends(

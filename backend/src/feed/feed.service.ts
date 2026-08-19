@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service';
 import type { SupportedCurrency } from '../domain/currency';
 import { toExpenseDto } from '../expenses/expense-view';
 import { UsersRepository } from '../users/users.repository';
@@ -13,15 +14,17 @@ export class FeedService {
   constructor(
     private readonly feedRepository: FeedRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly blocksService: BlocksService,
   ) {}
 
   /**
    * `GET /feed` (backend/CONTEXT.md — Feed): every Public Expense app-wide —
    * including the caller's own — newest first by Logged At, each shown in
    * the caller's own Preferred Currency via its frozen Conversion Snapshot
-   * (ADR-0008). Friend-only and Private Expenses never appear, regardless of
-   * Friendship. Block filtering (backend/CONTEXT.md — Block) is issue #15
-   * and not applied here yet.
+   * (ADR-0008), minus Block filtering (backend/CONTEXT.md — Block, issue
+   * #15): an Expense owned by a User mutually invisible with the caller
+   * never appears, and neither does a Like from one. Friend-only and
+   * Private Expenses never appear, regardless of Friendship.
    *
    * Keyset-paginated on `(loggedAt DESC, id DESC)`: `query.cursor` is the
    * opaque token {@link encodeFeedCursor} produced for the previous page's
@@ -41,6 +44,8 @@ export class FeedService {
 
     const limit = query.limit ?? FEED_DEFAULT_LIMIT;
     const cursor = query.cursor ? decodeFeedCursor(query.cursor) : undefined;
+    const invisibleOwnerIds =
+      await this.blocksService.invisibleUserIdsFor(viewerId);
 
     // One extra row decides whether a nextCursor exists, without a second
     // round trip.
@@ -48,6 +53,7 @@ export class FeedService {
       cursor,
       limit + 1,
       viewerId,
+      invisibleOwnerIds,
     );
     const page = rows.slice(0, limit);
     const last = page[page.length - 1];

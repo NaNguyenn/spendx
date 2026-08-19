@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { createBlock } from '@/api/blocks';
 import { fetchFeedPage, type FeedItemDto } from '@/api/feed';
 import { useSession } from '@/auth/session-context';
 import { TAB_BAR_INSET } from '@/components/app-tabs';
@@ -167,6 +169,65 @@ export default function FeedScreen() {
   }, []);
   const handleToggleLike = useLikeToggle(token, applyLikeToggle);
 
+  // Block (issue #15) — same confirm-then-mutate shape as the friend
+  // drill-down screen's `confirmUnfriend` (app/friend/[username].tsx),
+  // including the title/message split that dialog's own fix (git history)
+  // exists for: the `{name}` param goes on the *title* key, which has the
+  // placeholder — the message key doesn't.
+  const [blockError, setBlockError] = useState<string | null>(null);
+  const blockingRef = useRef(false);
+
+  const confirmBlock = useCallback(
+    (item: FeedItemDto) => {
+      Alert.alert(
+        t('block.confirmTitle', { name: item.owner.displayName }),
+        t('block.confirmMessage'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('block.confirm'),
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                if (!token || blockingRef.current) return;
+                blockingRef.current = true;
+                setBlockError(null);
+                try {
+                  await createBlock(token, { username: item.owner.username });
+                  // Full mutual invisibility (backend/CONTEXT.md's Block) —
+                  // every one of the blocked User's items leaves the Feed
+                  // immediately, filtered out of whatever pages are already
+                  // loaded rather than a full reload, which would also reset
+                  // scroll position and pagination (see this screen's header
+                  // comment on why `load` only ever runs on first focus).
+                  setState((prev) =>
+                    prev.status === 'loaded'
+                      ? {
+                          ...prev,
+                          items: prev.items.filter(
+                            (feedItem) =>
+                              feedItem.owner.username !== item.owner.username,
+                          ),
+                        }
+                      : prev,
+                  );
+                } catch (error) {
+                  const result = getErrorMessage(error);
+                  setBlockError(
+                    result.kind === 'server' ? result.text : t(result.key),
+                  );
+                } finally {
+                  blockingRef.current = false;
+                }
+              })();
+            },
+          },
+        ],
+      );
+    },
+    [token, t],
+  );
+
   if (!user || !token) return null;
 
   return (
@@ -182,6 +243,12 @@ export default function FeedScreen() {
           </ThemedText>
         </View>
       </View>
+
+      {blockError ? (
+        <ThemedText themeColor="danger" style={styles.blockError}>
+          {blockError}
+        </ThemedText>
+      ) : null}
 
       {state.status === 'loading' ? (
         <View style={styles.centered}>
@@ -200,7 +267,12 @@ export default function FeedScreen() {
           keyExtractor={keyExtractor}
           renderItem={({ item }) => (
             <View style={styles.rowSpacing}>
-              <FeedCard item={item} now={now} onToggleLike={handleToggleLike} />
+              <FeedCard
+                item={item}
+                now={now}
+                onToggleLike={handleToggleLike}
+                onBlock={confirmBlock}
+              />
             </View>
           )}
           style={styles.list}
@@ -270,6 +342,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12.5,
+  },
+  blockError: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    paddingHorizontal: Spacing.sp4,
+    paddingTop: Spacing.sp2,
   },
   list: {
     flex: 1,

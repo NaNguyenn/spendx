@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service';
 import { CLOCK, type Clock } from '../clock/clock';
 import {
   calendarDateInAppTimezone,
@@ -28,6 +29,7 @@ export class LeaderboardService {
     private readonly leaderboardRepository: LeaderboardRepository,
     private readonly friendshipsService: FriendshipsService,
     private readonly usersRepository: UsersRepository,
+    private readonly blocksService: BlocksService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -56,8 +58,19 @@ export class LeaderboardService {
     const anchor = query.anchor ?? calendarDateInAppTimezone(this.clock.now());
     const range = periodRangeOf(period, anchor);
 
-    const friends = await this.friendshipsService.listFriends(viewerId);
-    const participants: PublicUserDto[] = [toPublicUser(viewer), ...friends];
+    const [friends, invisibleUserIds] = await Promise.all([
+      this.friendshipsService.listFriends(viewerId),
+      this.blocksService.invisibleUserIdsFor(viewerId),
+    ]);
+    // Defense in depth (backend/CONTEXT.md — Block: "applied as a filter
+    // before all queries"): a severed Friendship already keeps a blocked
+    // User out of `friends` in the steady state, but this row survives
+    // regardless of whether that held.
+    const invisible = new Set(invisibleUserIds);
+    const participants: PublicUserDto[] = [
+      toPublicUser(viewer),
+      ...friends.filter((friend) => !invisible.has(friend.id)),
+    ];
 
     const rows = await this.rowsFor(
       participants,

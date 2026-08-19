@@ -17,6 +17,12 @@ export const vi: Record<TranslationKey, string> = {
   'like.like': 'Thích',
   'like.unlike': 'Bỏ thích',
 
+  'block.action': 'Chặn',
+  'block.confirmTitle': 'Chặn {name}?',
+  'block.confirmMessage':
+    'Cả hai sẽ không còn thấy nội dung của nhau ở bất kỳ đâu, và tình bạn giữa hai người (nếu có) sẽ kết thúc. Họ sẽ không nhận được thông báo nào.',
+  'block.confirm': 'Chặn',
+
   'tab.expenses': 'Chi tiêu',
   'tab.leaderboard': 'Xếp hạng',
   'tab.feed': 'Bảng tin',
@@ -141,7 +147,18 @@ export const vi: Record<TranslationKey, string> = {
   'profile.displayName': 'Tên hiển thị',
   'profile.username': 'Tên người dùng',
   'profile.email': 'Email',
+  'profile.safety': 'An toàn',
+  'profile.blockedAccounts': 'Tài khoản đã chặn',
   'profile.signOut': 'Đăng xuất',
+
+  'blockedAccounts.title': 'Tài khoản đã chặn',
+  'blockedAccounts.count': '{count} tài khoản',
+  'blockedAccounts.info':
+    'Người bị chặn sẽ biến mất khỏi Bảng tin và Bảng xếp hạng của bạn, và bạn cũng biến mất khỏi Bảng tin và Bảng xếp hạng của họ.',
+  'blockedAccounts.retry': 'Thử lại',
+  'blockedAccounts.unblock': 'Bỏ chặn',
+  'blockedAccounts.empty.title': 'Chưa chặn tài khoản nào',
+  'blockedAccounts.empty.note': 'Các tài khoản bạn chặn sẽ xuất hiện ở đây.',
 
   'auth.or': 'hoặc',
 

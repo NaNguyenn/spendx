@@ -121,6 +121,54 @@ describe('leaderboard', () => {
     await request(app.getHttpServer()).get('/leaderboard').expect(401);
   });
 
+  it('excludes a former Friend the viewer blocked from the Leaderboard', async () => {
+    await seedVndRates();
+    const viewer = await newActor({ preferredCurrency: 'VND' });
+    const blockedFriend = await newActor({ username: 'blockedfriend' });
+    await becomeFriends(viewer, blockedFriend);
+    await createExpense(app, blockedFriend.token, {
+      originalAmount: '500000.0000',
+      originalCurrency: 'VND',
+      visibility: 'public',
+      expenseDate: LOGGING_DATE,
+    });
+
+    await request(app.getHttpServer())
+      .post('/blocks')
+      .set('Authorization', `Bearer ${viewer.token}`)
+      .send({ username: blockedFriend.username });
+
+    const board = leaderboardBody(await getLeaderboard(viewer));
+
+    expect(board.rows.map((row) => row.user.username)).toEqual([
+      viewer.username,
+    ]);
+  });
+
+  it('excludes a former Friend who blocked the viewer from the Leaderboard', async () => {
+    await seedVndRates();
+    const viewer = await newActor({ preferredCurrency: 'VND' });
+    const blockingFriend = await newActor({ username: 'blockingfriend' });
+    await becomeFriends(viewer, blockingFriend);
+    await createExpense(app, blockingFriend.token, {
+      originalAmount: '500000.0000',
+      originalCurrency: 'VND',
+      visibility: 'public',
+      expenseDate: LOGGING_DATE,
+    });
+
+    await request(app.getHttpServer())
+      .post('/blocks')
+      .set('Authorization', `Bearer ${blockingFriend.token}`)
+      .send({ username: viewer.username });
+
+    const board = leaderboardBody(await getLeaderboard(viewer));
+
+    expect(board.rows.map((row) => row.user.username)).toEqual([
+      viewer.username,
+    ]);
+  });
+
   it('400s on an invalid period', async () => {
     const viewer = await newActor();
     const response = await getLeaderboard(viewer, { period: 'day' });

@@ -86,6 +86,10 @@ function RootNavigator() {
             "every route under (app)/ becomes a tab slot" reason log-expense
             lives here. See app/friend/[username].tsx's header comment. */}
         <Stack.Screen name="friend/[username]" />
+        {/* Profile's "Blocked accounts" row (issue #15) — a pushed screen,
+            same root-Stack-sibling reasoning as log-expense and
+            friend/[username] above. See app/blocked-accounts.tsx. */}
+        <Stack.Screen name="blocked-accounts" />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

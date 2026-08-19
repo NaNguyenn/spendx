@@ -188,6 +188,32 @@ describe('friends', () => {
       expect(response.status).toBe(409);
       expect(errorMessage(response).toLowerCase()).toContain('accept');
     });
+
+    it('404s the same as an unknown Username when the sender blocked the recipient', async () => {
+      const a = await newActor();
+      const b = await newActor();
+      await request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${a.token}`)
+        .send({ username: b.username });
+
+      const response = await sendFriendRequest(a, b.username);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('404s the same as an unknown Username when the recipient blocked the sender', async () => {
+      const a = await newActor();
+      const b = await newActor();
+      await request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${b.token}`)
+        .send({ username: a.username });
+
+      const response = await sendFriendRequest(a, b.username);
+
+      expect(response.status).toBe(404);
+    });
   });
 
   describe('GET /friend-requests', () => {
@@ -544,6 +570,34 @@ describe('friends', () => {
       const a = await newActor();
 
       const response = await getFriendExpenses(a, 'nobody-has-this-handle');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('404s (not 403) when the reader blocked the owner, even though they were Friends', async () => {
+      const owner = await newActor();
+      const friend = await newActor();
+      await becomeFriends(owner, friend);
+      await request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${friend.token}`)
+        .send({ username: owner.username });
+
+      const response = await getFriendExpenses(friend, owner.username);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('404s (not 403) when the owner blocked the reader, even though they were Friends', async () => {
+      const owner = await newActor();
+      const friend = await newActor();
+      await becomeFriends(owner, friend);
+      await request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ username: friend.username });
+
+      const response = await getFriendExpenses(friend, owner.username);
 
       expect(response.status).toBe(404);
     });

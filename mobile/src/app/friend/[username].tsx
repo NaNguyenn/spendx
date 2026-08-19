@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { createBlock } from '@/api/blocks';
 import { ApiError } from '@/api/client';
 import type { ExpenseDto } from '@/api/expenses';
 import { fetchFriendExpenses, unfriend } from '@/api/friends';
@@ -39,6 +40,14 @@ const UNFRIEND_ICON: SymbolViewProps['name'] = {
   web: 'person_remove',
 };
 
+// Same icon choice as feed-card.tsx's Block circle — see that file's own
+// comment on the lucide `ban` → SF Symbols/Material mapping.
+const BLOCK_ICON: SymbolViewProps['name'] = {
+  ios: 'nosign',
+  android: 'block',
+  web: 'block',
+};
+
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -63,6 +72,15 @@ const keyExtractor = (expense: ExpenseDto) => expense.id;
  * the Period bounds this screen already needs. `displayName` rides along
  * too, purely so the header has a name to show before the Expenses fetch
  * resolves; it is never sent back to the API.
+ *
+ * The header's second circle is Block (issue #15, backend/CONTEXT.md's
+ * Block) — undesigned here same as the rest of this screen; styled to match
+ * Unfriend's own danger circle since both are destructive, header-level
+ * actions on the same person. Unlike Unfriend (which keeps this screen open
+ * so the now-friendless drill-down can still show what was Shareable), a
+ * successful Block makes the account invisible outright — `GET
+ * /users/{username}/expenses` would 404 on the next load — so this navigates
+ * back immediately instead.
  */
 export default function FriendExpensesScreen() {
   const { token } = useSession();
@@ -80,6 +98,8 @@ export default function FriendExpensesScreen() {
   const [now] = useState(() => new Date());
   const [unfriendBusy, setUnfriendBusy] = useState(false);
   const [unfriendError, setUnfriendError] = useState<string | null>(null);
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !params.username) return;
@@ -159,6 +179,38 @@ export default function FriendExpensesScreen() {
     );
   }, [token, params.username, params.displayName, router, t]);
 
+  const confirmBlock = useCallback(() => {
+    if (!token || !params.username) return;
+    const name = params.displayName ?? `@${params.username}`;
+    Alert.alert(t('block.confirmTitle', { name }), t('block.confirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('block.confirm'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setBlockError(null);
+            setBlockBusy(true);
+            try {
+              await createBlock(token, { username: params.username });
+              // Full mutual invisibility (backend/CONTEXT.md's Block) — the
+              // account is gone from here on, so there is nothing left for
+              // this screen to show; back out rather than reload.
+              router.back();
+            } catch (error) {
+              const result = getErrorMessage(error);
+              setBlockError(
+                result.kind === 'server' ? result.text : t(result.key),
+              );
+            } finally {
+              setBlockBusy(false);
+            }
+          })();
+        },
+      },
+    ]);
+  }, [token, params.username, params.displayName, router, t]);
+
   // Optimistic Like toggle (issue #14) — the double-tap guard, the
   // pre-toggle branch, and the silent-revert-on-failure (including the 404
   // case: the Expense went invisible mid-view, e.g. the owner changed its
@@ -210,24 +262,48 @@ export default function FriendExpensesScreen() {
           </ThemedText>
         </View>
 
-        <Pressable
-          onPress={confirmUnfriend}
-          disabled={unfriendBusy}
-          accessibilityRole="button"
-          accessibilityLabel={t('leaderboard.friends.unfriend')}
-          style={[
-            styles.unfriendButton,
-            { backgroundColor: theme.dangerSoft },
-            unfriendBusy && styles.pressed,
-          ]}
-        >
-          <SymbolView name={UNFRIEND_ICON} size={16} tintColor={theme.danger} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={confirmUnfriend}
+            disabled={unfriendBusy}
+            accessibilityRole="button"
+            accessibilityLabel={t('leaderboard.friends.unfriend')}
+            style={[
+              styles.unfriendButton,
+              { backgroundColor: theme.dangerSoft },
+              unfriendBusy && styles.pressed,
+            ]}
+          >
+            <SymbolView
+              name={UNFRIEND_ICON}
+              size={16}
+              tintColor={theme.danger}
+            />
+          </Pressable>
+          <Pressable
+            onPress={confirmBlock}
+            disabled={blockBusy}
+            accessibilityRole="button"
+            accessibilityLabel={t('block.action')}
+            style={[
+              styles.unfriendButton,
+              { backgroundColor: theme.dangerSoft },
+              blockBusy && styles.pressed,
+            ]}
+          >
+            <SymbolView name={BLOCK_ICON} size={16} tintColor={theme.danger} />
+          </Pressable>
+        </View>
       </View>
 
       {unfriendError ? (
         <ThemedText themeColor="danger" style={styles.unfriendError}>
           {unfriendError}
+        </ThemedText>
+      ) : null}
+      {blockError ? (
+        <ThemedText themeColor="danger" style={styles.unfriendError}>
+          {blockError}
         </ThemedText>
       ) : null}
 
@@ -327,6 +403,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12.5,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sp2,
   },
   unfriendButton: {
     width: 34,

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service';
 import { ExpenseDto } from '../expenses/dto/expense.dto';
 import {
   ExpensesService,
@@ -19,6 +20,7 @@ export class FriendshipsService {
     private readonly friendshipsRepository: FriendshipsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly expensesService: ExpensesService,
+    private readonly blocksService: BlocksService,
   ) {}
 
   /** The caller's Friends, ordered by Username. */
@@ -65,6 +67,13 @@ export class FriendshipsService {
       usernameRaw.toLowerCase(),
     );
     if (!owner) {
+      throw new NotFoundException('User not found');
+    }
+    // backend/CONTEXT.md — Block: mutually invisible everywhere, including
+    // this Friendship-gated path — 404s identically to an unknown Username
+    // rather than the usual 403 a stranger or ex-Friend gets, so a Block
+    // can never be told apart from an account that never existed.
+    if (await this.blocksService.isBlockedEitherDirection(readerId, owner.id)) {
       throw new NotFoundException('User not found');
     }
     if (owner.id === readerId) {

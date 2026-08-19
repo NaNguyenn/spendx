@@ -217,6 +217,96 @@ describe('likes', () => {
     });
   });
 
+  describe('Block filtering (backend/CONTEXT.md — Block, issue #15)', () => {
+    function blockUser(actor: Actor, username: string) {
+      return request(app.getHttpServer())
+        .post('/blocks')
+        .set('Authorization', `Bearer ${actor.token}`)
+        .send({ username });
+    }
+
+    it('excludes a Like from a User the viewer blocked, from both the count and the likers list', async () => {
+      await seedVndRates();
+      const owner = await newActor();
+      const liker = await newActor();
+      const viewer = await newActor();
+      const expenseId = await createPublicExpense(owner);
+
+      await like(liker, expenseId).expect(204);
+      await blockUser(viewer, liker.username);
+
+      const feed = feedPageBody(await getFeed(viewer));
+      const item = feed.items.find((i) => i.id === expenseId);
+      expect(item).toMatchObject({ likeCount: 0 });
+
+      const likers = publicUserListBody(await getLikers(viewer, expenseId));
+      expect(likers).toEqual([]);
+    });
+
+    it('excludes a Like from a User who blocked the viewer, from both the count and the likers list', async () => {
+      await seedVndRates();
+      const owner = await newActor();
+      const liker = await newActor();
+      const viewer = await newActor();
+      const expenseId = await createPublicExpense(owner);
+
+      await like(liker, expenseId).expect(204);
+      await blockUser(liker, viewer.username);
+
+      const feed = feedPageBody(await getFeed(viewer));
+      const item = feed.items.find((i) => i.id === expenseId);
+      expect(item).toMatchObject({ likeCount: 0 });
+
+      const likers = publicUserListBody(await getLikers(viewer, expenseId));
+      expect(likers).toEqual([]);
+    });
+
+    it("404s liking, unliking, and listing likers of a blocked User's Expense — viewer blocked the owner", async () => {
+      await seedVndRates();
+      const owner = await newActor();
+      const viewer = await newActor();
+      const expenseId = await createPublicExpense(owner);
+      await blockUser(viewer, owner.username);
+
+      expect((await like(viewer, expenseId)).status).toBe(404);
+      expect((await unlike(viewer, expenseId)).status).toBe(404);
+      expect((await getLikers(viewer, expenseId)).status).toBe(404);
+    });
+
+    it("404s liking, unliking, and listing likers of a blocked User's Expense — owner blocked the viewer", async () => {
+      await seedVndRates();
+      const owner = await newActor();
+      const viewer = await newActor();
+      const expenseId = await createPublicExpense(owner);
+      await blockUser(owner, viewer.username);
+
+      expect((await like(viewer, expenseId)).status).toBe(404);
+      expect((await unlike(viewer, expenseId)).status).toBe(404);
+      expect((await getLikers(viewer, expenseId)).status).toBe(404);
+    });
+
+    it('a still-visible Expense keeps likeCount and likedByViewer accurate on the own-list read', async () => {
+      await seedVndRates();
+      const owner = await newActor();
+      const liker = await newActor();
+      const blockedLiker = await newActor();
+      const { response } = await createExpense(app, owner.token, {
+        description: 'own spend with mixed likers',
+        visibility: 'public',
+        expenseDate: LOGGING_DATE,
+      });
+      const expenseId = expenseBody(response).id;
+
+      await like(liker, expenseId).expect(204);
+      await like(blockedLiker, expenseId).expect(204);
+      await blockUser(owner, blockedLiker.username);
+
+      const ownList = expenseListBody(await getOwnExpenses(owner));
+      const item = ownList.find((e) => e.id === expenseId);
+      expect(item).toMatchObject({ likeCount: 1, likedByViewer: false });
+    });
+  });
+
   describe('404s', () => {
     it('404s liking a nonexistent Expense', async () => {
       const actor = await newActor();
