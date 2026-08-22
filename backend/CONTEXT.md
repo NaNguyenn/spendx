@@ -94,3 +94,17 @@ _Avoid_: Flag (as a noun)
 **Feed**:
 The app-wide stream of every Public expense, newest first (by Logged At), shown to all Users minus Block filtering.
 _Avoid_: Timeline, discover (as a noun)
+
+### Account
+
+**One-Time Code**:
+A 6-digit code emailed to a User to prove control of their email address, for exactly one purpose: Email Verification or Password Reset. Single-use, expiring (15 minutes for reset, 24 hours for verification), superseded by any newer code for the same purpose, and dead after 5 failed attempts.
+_Avoid_: OTP (informal), token (that's a session concern), magic link
+
+**Email Verification**:
+The act of confirming a One-Time Code to mark a User's email address as verified. Gates nothing — accounts are fully usable unverified; the state is visible only to the owner on their Profile.
+_Avoid_: Activation, confirmation (overloaded)
+
+**Password Reset**:
+The flow that replaces a forgotten password via a One-Time Code sent to the account email, without being signed in. Completing it ends all of the User's existing sessions. Requesting one for an unknown email is indistinguishable from requesting one for a known email.
+_Avoid_: Password recovery, forgot-password (as a domain term)
