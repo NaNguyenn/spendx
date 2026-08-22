@@ -102,9 +102,15 @@ export const vi: Record<TranslationKey, string> = {
     'Bạn không còn là bạn bè với tài khoản này, nên không thể thấy khoản chi của họ.',
   'friendExpenses.notFound': 'Tài khoản này không còn tồn tại.',
 
-  'category.housing': 'Nhà ở',
   'category.food': 'Ăn uống',
+  'category.housing': 'Nhà ở',
+  'category.transportation': 'Di chuyển',
+  'category.vehicle': 'Xe cộ',
+  'category.shopping': 'Mua sắm',
   'category.leisure': 'Giải trí',
+  'category.health': 'Sức khỏe',
+  'category.education': 'Giáo dục',
+  'category.travel': 'Du lịch',
   'category.investment': 'Đầu tư',
   'category.other': 'Khác',
 

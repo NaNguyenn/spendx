@@ -14,11 +14,11 @@ interface CategorySelectorProps {
 
 /**
  * Design component `Tgn6k`, "Component — Category Chip", laid out as the
- * mock's two chip rows (3 + 2). `flexWrap` reproduces that without
- * hardcoding which categories share a row — CATEGORIES' own order (housing,
- * food, leisure, investment, other) is what actually determines the wrap
- * point, same result as the mock's two explicit rows for five items at
- * these chip widths.
+ * mock's chip rows. `flexWrap` reproduces that without hardcoding which
+ * categories share a row — CATEGORIES' own canonical order (food, housing,
+ * transportation, vehicle, shopping, leisure, health, education, travel,
+ * investment, other; docs/adr/0011) is what actually determines the wrap
+ * point at these chip widths.
  */
 export function CategorySelector({ value, onChange }: CategorySelectorProps) {
   return (

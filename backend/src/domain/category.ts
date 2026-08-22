@@ -11,9 +11,15 @@ import type { Category as PersistedCategory } from '../generated/prisma/enums';
  * one it can.
  */
 export const CATEGORIES = [
-  'housing',
   'food',
+  'housing',
+  'transportation',
+  'vehicle',
+  'shopping',
   'leisure',
+  'health',
+  'education',
+  'travel',
   'investment',
   'other',
 ] as const satisfies readonly PersistedCategory[];

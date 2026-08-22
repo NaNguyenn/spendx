@@ -1334,7 +1334,19 @@
       },
       "Category": {
         "type": "string",
-        "enum": ["housing", "food", "leisure", "investment", "other"]
+        "enum": [
+          "food",
+          "housing",
+          "transportation",
+          "vehicle",
+          "shopping",
+          "leisure",
+          "health",
+          "education",
+          "travel",
+          "investment",
+          "other"
+        ]
       },
       "Visibility": {
         "type": "string",

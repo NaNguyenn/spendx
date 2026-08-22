@@ -43,7 +43,20 @@ The at-most-one image attached to an Expense. Part of the Expense: inherits its 
 _Avoid_: Gallery, photo (as a domain term)
 
 **Category**:
-One of a fixed, app-curated set of spending kinds (e.g. Housing, Food, Leisure, Investment, Other) shared by all Users — the vocabulary that makes cross-user categorized views possible. Stored as language-neutral slugs; labels localized (en/vi). Users cannot create Categories.
+One of eleven fixed, app-curated spending kinds shared by all Users — the vocabulary that makes cross-user categorized views possible. Stored as language-neutral slugs; a slug is frozen once introduced while its localized (en/vi) label may evolve, so slug and label can diverge (ADR-0011). Users cannot create Categories. The kinds, in canonical order, with their boundaries:
+
+- **Food & Drinks** (`food`) — groceries, restaurants, cafés, delivery.
+- **Housing** (`housing`) — rent, mortgage, repairs, furnishing, and utilities including phone plans and home internet.
+- **Transportation** (`transportation`) — paying someone else to move you: bus, train, taxi, ride-hailing. Flights belong to Travel.
+- **Vehicle** (`vehicle`) — the costs of owning one: fuel, maintenance, parts, insurance, parking, registration.
+- **Shopping** (`shopping`) — bought goods: clothes, electronics, household products.
+- **Life & Entertainment** (`leisure`) — discretionary fun, personal care, and social life: going out, streaming, hobbies, haircuts, gym, gifts & charity, and all pet spending (vet included).
+- **Health** (`health`) — human medical only: doctor, dentist, pharmacy, health insurance. Wellness-by-choice (gym, spa, yoga) is Life & Entertainment.
+- **Education** (`education`) — tuition, courses, study materials.
+- **Travel** (`travel`) — trips as a unit: flights, lodging, holiday spending.
+- **Investments** (`investment`) — money put into assets: deposits, stocks, funds.
+- **Others** (`other`) — the deliberate catch-all, kept small and meaningless; heavy use of it signals the next Category to add.
+
 _Avoid_: Tag, custom category
 
 **Visibility**:

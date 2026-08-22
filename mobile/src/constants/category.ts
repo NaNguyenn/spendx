@@ -12,9 +12,15 @@ import type { TranslationKey } from '@/i18n/en';
 export type Category = components['schemas']['Category'];
 
 export const CATEGORIES = [
-  'housing',
   'food',
+  'housing',
+  'transportation',
+  'vehicle',
+  'shopping',
   'leisure',
+  'health',
+  'education',
+  'travel',
   'investment',
   'other',
 ] as const satisfies readonly Category[];
@@ -33,7 +39,7 @@ export type EveryCategoryIsListed = AssertNone<MissingCategory>;
  * as app-tabs.tsx/profile.tsx), and which theme tokens the Category Tile
  * (Expense Row) and Category Chip (Log Expense) pull their colors from —
  * `catHousing`/`catHousingSoft` etc. added to constants/theme.ts for this
- * ticket.
+ * ticket, extended from five to all eleven categories per docs/adr/0011.
  */
 export const CATEGORY_META: Record<
   Category,
@@ -44,17 +50,35 @@ export const CATEGORY_META: Record<
     soft: ThemeColor;
   }
 > = {
+  food: {
+    labelKey: 'category.food',
+    icon: { ios: 'fork.knife', android: 'restaurant', web: 'restaurant' },
+    color: 'catFood',
+    soft: 'catFoodSoft',
+  },
   housing: {
     labelKey: 'category.housing',
     icon: { ios: 'house', android: 'home', web: 'home' },
     color: 'catHousing',
     soft: 'catHousingSoft',
   },
-  food: {
-    labelKey: 'category.food',
-    icon: { ios: 'fork.knife', android: 'restaurant', web: 'restaurant' },
-    color: 'catFood',
-    soft: 'catFoodSoft',
+  transportation: {
+    labelKey: 'category.transportation',
+    icon: { ios: 'bus', android: 'directions_bus', web: 'directions_bus' },
+    color: 'catTransportation',
+    soft: 'catTransportationSoft',
+  },
+  vehicle: {
+    labelKey: 'category.vehicle',
+    icon: { ios: 'car', android: 'directions_car', web: 'directions_car' },
+    color: 'catVehicle',
+    soft: 'catVehicleSoft',
+  },
+  shopping: {
+    labelKey: 'category.shopping',
+    icon: { ios: 'bag', android: 'shopping_bag', web: 'shopping_bag' },
+    color: 'catShopping',
+    soft: 'catShoppingSoft',
   },
   leisure: {
     labelKey: 'category.leisure',
@@ -65,6 +89,28 @@ export const CATEGORY_META: Record<
     },
     color: 'catLeisure',
     soft: 'catLeisureSoft',
+  },
+  health: {
+    labelKey: 'category.health',
+    icon: {
+      ios: 'waveform.path.ecg',
+      android: 'monitor_heart',
+      web: 'monitor_heart',
+    },
+    color: 'catHealth',
+    soft: 'catHealthSoft',
+  },
+  education: {
+    labelKey: 'category.education',
+    icon: { ios: 'graduationcap', android: 'school', web: 'school' },
+    color: 'catEducation',
+    soft: 'catEducationSoft',
+  },
+  travel: {
+    labelKey: 'category.travel',
+    icon: { ios: 'airplane', android: 'flight', web: 'flight' },
+    color: 'catTravel',
+    soft: 'catTravelSoft',
   },
   investment: {
     labelKey: 'category.investment',

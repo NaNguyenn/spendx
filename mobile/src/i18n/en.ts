@@ -156,11 +156,17 @@ export const en = {
   // 404 — an unknown Username.
   'friendExpenses.notFound': 'This account no longer exists.',
 
+  'category.food': 'Food & Drinks',
   'category.housing': 'Housing',
-  'category.food': 'Food',
-  'category.leisure': 'Leisure',
-  'category.investment': 'Investment',
-  'category.other': 'Other',
+  'category.transportation': 'Transportation',
+  'category.vehicle': 'Vehicle',
+  'category.shopping': 'Shopping',
+  'category.leisure': 'Life & Entertainment',
+  'category.health': 'Health',
+  'category.education': 'Education',
+  'category.travel': 'Travel',
+  'category.investment': 'Investments',
+  'category.other': 'Others',
 
   'visibility.private': 'Private',
   'visibility.friendOnly': 'Friend-only',

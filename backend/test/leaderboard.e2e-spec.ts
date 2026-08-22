@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { CATEGORIES } from '../src/domain/category';
 import { createTestApp } from './helpers/app';
 import { signUp } from './helpers/auth';
 import { FixedClock } from './helpers/clock';
@@ -241,6 +242,9 @@ describe('leaderboard', () => {
 
     const zeroRow = board.rows.find((r) => r.user.username === 'friendzero')!;
     expect(zeroRow.categories.every((c) => c.total === '0.0000')).toBe(true);
+    // All zero, so every Category ties — the row carries every Category in
+    // CATEGORIES' own canonical order.
+    expect(zeroRow.categories.map((c) => c.category)).toEqual([...CATEGORIES]);
 
     // A User with no Friends at all gets just their own row.
     const lonely = await newActor({ username: 'lonely' });

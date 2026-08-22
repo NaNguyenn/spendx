@@ -616,7 +616,18 @@ export interface components {
       password: string;
     };
     /** @enum {string} */
-    Category: 'housing' | 'food' | 'leisure' | 'investment' | 'other';
+    Category:
+      | 'food'
+      | 'housing'
+      | 'transportation'
+      | 'vehicle'
+      | 'shopping'
+      | 'leisure'
+      | 'health'
+      | 'education'
+      | 'travel'
+      | 'investment'
+      | 'other';
     /** @enum {string} */
     Visibility: 'private' | 'friend_only' | 'public';
     CreateExpenseDto: {

@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { CATEGORIES } from '../src/domain/category';
 import { SUPPORTED_CURRENCIES } from '../src/domain/currency';
 import { createTestApp } from './helpers/app';
 import { signUp } from './helpers/auth';
@@ -355,6 +356,23 @@ describe('expenses', () => {
       });
       expect(response.status).toBe(400);
       expect(errorMessage(response)).toMatch(/category/i);
+    });
+
+    it('accepts every persisted Category slug', async () => {
+      const token = await signUpForToken('VND');
+      await seedDailyRatesFromBase(app, rateProvider, {
+        baseCurrency: 'VND',
+        date: '2026-08-01',
+      });
+
+      for (const category of CATEGORIES) {
+        const { response } = await createExpense(app, token, {
+          originalCurrency: 'VND',
+          category,
+        });
+        expect(response.status).toBe(201);
+        expect(expenseBody(response).category).toBe(category);
+      }
     });
 
     it('rejects an unknown Visibility', async () => {

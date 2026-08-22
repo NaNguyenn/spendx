@@ -24,7 +24,8 @@ const BASELINE_NOW = new Date('2026-08-05T10:00:00.000Z');
 const LOGGING_DATE = '2026-08-05';
 
 // All zero, so every category ties — expected in CATEGORIES' own canonical
-// order (housing, food, leisure, investment, other).
+// order (food, housing, transportation, vehicle, shopping, leisure, health,
+// education, travel, investment, other).
 const ZERO_CATEGORIES = CATEGORIES.map((category) => ({
   category,
   total: '0.0000',
@@ -62,7 +63,7 @@ describe('statistics', () => {
     await request(app.getHttpServer()).get('/expenses/statistics').expect(401);
   });
 
-  it('returns all-zero totals and five zero Categories, sorted stably, for an owner with no Expenses', async () => {
+  it('returns all-zero totals and eleven zero Categories, sorted stably, for an owner with no Expenses', async () => {
     const token = await signUpForToken('VND');
 
     const response = await request(app.getHttpServer())
@@ -138,8 +139,15 @@ describe('statistics', () => {
         { category: 'food', total: '30000.0000' },
         { category: 'leisure', total: '20000.0000' },
         { category: 'housing', total: '10000.0000' },
-        // Both zero — tied, so canonical CATEGORIES order (investment before
-        // other) breaks the tie.
+        // All zero — tied, so canonical CATEGORIES order breaks the tie:
+        // transportation, vehicle, shopping, health, education, travel,
+        // investment, other.
+        { category: 'transportation', total: '0.0000' },
+        { category: 'vehicle', total: '0.0000' },
+        { category: 'shopping', total: '0.0000' },
+        { category: 'health', total: '0.0000' },
+        { category: 'education', total: '0.0000' },
+        { category: 'travel', total: '0.0000' },
         { category: 'investment', total: '0.0000' },
         { category: 'other', total: '0.0000' },
       ],

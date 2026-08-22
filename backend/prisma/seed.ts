@@ -192,8 +192,8 @@ function buildDailyRates(): Array<{
 
 /**
  * A handful of `you`'s Expenses so the Expenses tab has content before the
- * demo path logs anything new. Spans all five Category values and all three
- * Visibility values; the concert ticket is in USD so the list shows a
+ * demo path logs anything new. Spans all eleven Category values and all
+ * three Visibility values; the concert ticket is in USD so the list shows a
  * Converted Amount that differs from the Original Amount.
  *
  * `expenseDate` and `loggedAt` are picked so the app-timezone (ICT, UTC+7)
@@ -277,6 +277,73 @@ const expenses = [
     visibility: 'friend_only' as const,
     expenseDate: calendarDateToDate('2026-01-09'),
     loggedAt: new Date('2026-01-09T00:00:00.000Z'), // 07:00 ICT
+  },
+  {
+    id: '01920000-0000-7000-8200-000000000007',
+    ownerId: YOU_ID,
+    description: 'Grab bike đi làm',
+    originalAmount: '35000',
+    originalCurrency: 'VND' as const,
+    category: 'transportation' as const,
+    visibility: 'public' as const,
+    expenseDate: calendarDateToDate('2026-01-10'),
+    loggedAt: new Date('2026-01-10T00:30:00.000Z'), // 07:30 ICT
+  },
+  {
+    id: '01920000-0000-7000-8200-000000000008',
+    ownerId: YOU_ID,
+    description: 'Đổ xăng xe máy',
+    originalAmount: '120000',
+    originalCurrency: 'VND' as const,
+    category: 'vehicle' as const,
+    visibility: 'private' as const,
+    expenseDate: calendarDateToDate('2026-01-11'),
+    loggedAt: new Date('2026-01-11T03:00:00.000Z'), // 10:00 ICT
+  },
+  {
+    id: '01920000-0000-7000-8200-000000000009',
+    ownerId: YOU_ID,
+    description: 'Áo khoác mới',
+    originalAmount: '650000',
+    originalCurrency: 'VND' as const,
+    category: 'shopping' as const,
+    visibility: 'friend_only' as const,
+    expenseDate: calendarDateToDate('2026-01-12'),
+    loggedAt: new Date('2026-01-12T05:15:00.000Z'), // 12:15 ICT
+  },
+  {
+    id: '01920000-0000-7000-8200-000000000010',
+    ownerId: YOU_ID,
+    description: 'Khám răng định kỳ',
+    originalAmount: '450000',
+    originalCurrency: 'VND' as const,
+    category: 'health' as const,
+    visibility: 'private' as const,
+    expenseDate: calendarDateToDate('2026-01-13'),
+    loggedAt: new Date('2026-01-13T02:00:00.000Z'), // 09:00 ICT
+  },
+  {
+    id: '01920000-0000-7000-8200-000000000011',
+    ownerId: YOU_ID,
+    description: 'Khoá học tiếng Anh',
+    originalAmount: '1200000',
+    originalCurrency: 'VND' as const,
+    category: 'education' as const,
+    visibility: 'public' as const,
+    expenseDate: calendarDateToDate('2026-01-14'),
+    loggedAt: new Date('2026-01-14T11:00:00.000Z'), // 18:00 ICT
+  },
+  {
+    id: '01920000-0000-7000-8200-000000000012',
+    ownerId: YOU_ID,
+    description: 'Vé máy bay Đà Lạt',
+    originalAmount: '75.00',
+    originalCurrency: 'USD' as const,
+    // 75.00 * 25000 (USD->VND @ RATE_DATE) = 1,875,000.0000
+    category: 'travel' as const,
+    visibility: 'friend_only' as const,
+    expenseDate: calendarDateToDate('2026-01-15'),
+    loggedAt: new Date('2026-01-15T06:00:00.000Z'), // 13:00 ICT
   },
 ];
 
