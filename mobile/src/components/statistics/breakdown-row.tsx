@@ -39,7 +39,15 @@ export function BreakdownRow({
       <View style={styles.rowTop}>
         <View style={styles.rowLeft}>
           <View style={[styles.dot, { backgroundColor: theme[meta.color] }]} />
-          <ThemedText style={styles.rowName}>{t(meta.labelKey)}</ThemedText>
+          {/*
+            `numberOfLines={1}` is load-bearing for two-word Vietnamese labels:
+            without it Yoga can size this Text to its longest word and wrap the
+            rest onto an invisible second line — "Giải trí" renders as "Giải".
+            Same trap as the picker chip (category-selector.tsx).
+          */}
+          <ThemedText numberOfLines={1} style={styles.rowName}>
+            {t(meta.labelKey)}
+          </ThemedText>
           <ThemedText themeColor="textTertiary" style={styles.rowPct}>
             {formatPercent(share, locale)}
           </ThemedText>
