@@ -147,6 +147,9 @@ export const vi: Record<TranslationKey, string> = {
   'profile.displayName': 'Tên hiển thị',
   'profile.username': 'Tên người dùng',
   'profile.email': 'Email',
+  'profile.emailVerification': 'Xác minh email',
+  'profile.verified': 'Đã xác minh',
+  'profile.unverified': 'Chưa xác minh',
   'profile.safety': 'An toàn',
   'profile.blockedAccounts': 'Tài khoản đã chặn',
   'profile.signOut': 'Đăng xuất',
@@ -159,6 +162,16 @@ export const vi: Record<TranslationKey, string> = {
   'blockedAccounts.unblock': 'Bỏ chặn',
   'blockedAccounts.empty.title': 'Chưa chặn tài khoản nào',
   'blockedAccounts.empty.note': 'Các tài khoản bạn chặn sẽ xuất hiện ở đây.',
+
+  'verifyEmail.title': 'Xác minh email của bạn',
+  'verifyEmail.subtitle':
+    'Chúng tôi đã gửi mã 6 chữ số đến {email} khi bạn đăng ký, nên có thể mã đã có sẵn trong hộp thư của bạn. Nhập mã bên dưới để xác minh địa chỉ này.',
+  'verifyEmail.codeLabel': 'Mã xác minh',
+  'verifyEmail.confirm': 'Xác nhận',
+  'verifyEmail.resend': 'Gửi lại mã',
+  'verifyEmail.resendCountdown': 'Gửi lại sau {seconds}s',
+  'verifyEmail.verifiedTitle': 'Email đã được xác minh',
+  'verifyEmail.verifiedNote': 'Địa chỉ email của bạn đã được xác nhận.',
 
   'auth.or': 'hoặc',
 

@@ -12,6 +12,13 @@ export interface SecondaryButtonProps {
   onPress?: (event: GestureResponderEvent) => void;
   /** Danger-colored label for irreversible actions (delete). */
   destructive?: boolean;
+  /**
+   * The Verify Email screen's Resend control (app/verify-email.tsx, issue
+   * #20) is the first caller that needs this — disabled for the 60-second
+   * cooldown between sends, same "disabled means dimmed and unpressable" as
+   * PrimaryButton's own `disabled`.
+   */
+  disabled?: boolean;
 }
 
 /** Same geometry as PrimaryButton, transparent fill, label in accent. */
@@ -19,12 +26,19 @@ export function SecondaryButton({
   label,
   onPress,
   destructive = false,
+  disabled = false,
 }: SecondaryButtonProps) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && styles.pressed,
+        disabled && styles.disabled,
+      ]}
     >
       <ThemedText type="button" themeColor={destructive ? 'danger' : 'accent'}>
         {label}
@@ -41,6 +55,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: {
+    opacity: 0.6,
+  },
+  disabled: {
     opacity: 0.6,
   },
 });

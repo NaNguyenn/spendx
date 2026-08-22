@@ -12,6 +12,7 @@ import { BlocksModule } from './blocks/blocks.module';
 import { AppConfigModule } from './config/config.module';
 import type { Env } from './config/env.schema';
 import { EmailModule } from './email/email.module';
+import { EmailVerificationModule } from './email-verification/email-verification.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { FeedModule } from './feed/feed.module';
 import { FriendsModule } from './friends/friends.module';
@@ -52,6 +53,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     BlocksModule,
     UsersModule,
+    EmailVerificationModule,
     AuthModule,
     ExpensesModule,
     FriendsModule,

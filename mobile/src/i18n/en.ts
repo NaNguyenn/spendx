@@ -205,6 +205,13 @@ export const en = {
   'profile.displayName': 'Display name',
   'profile.username': 'Username',
   'profile.email': 'Email',
+  // The ACCOUNT section's Email verification row (issue #20, backend/CONTEXT.md's
+  // Email Verification) — right after Email, since it's a property of that
+  // same field. `verified`/`unverified` are its value; unverified is the
+  // only state that opens app/verify-email.tsx (see profile.tsx).
+  'profile.emailVerification': 'Email verification',
+  'profile.verified': 'Verified',
+  'profile.unverified': 'Unverified',
   // SAFETY section (design's `fOHsj`, issue #15) — its one row today.
   'profile.safety': 'Safety',
   'profile.blockedAccounts': 'Blocked accounts',
@@ -222,6 +229,26 @@ export const en = {
   'blockedAccounts.unblock': 'Unblock',
   'blockedAccounts.empty.title': 'No blocked accounts',
   'blockedAccounts.empty.note': 'Accounts you block will show up here.',
+
+  // Verify Email screen (app/verify-email.tsx, issue #20) — pushed from
+  // Profile's "Email verification" row when unverified. Reuses the Auth
+  // screens' title/subtitle chrome, hence the `auth.*`-adjacent tone rather
+  // than blockedAccounts.tsx's header-row copy.
+  'verifyEmail.title': 'Verify your email',
+  // {email} is the signed-in account's own address (session-context.tsx's
+  // `user.email`) — the sign-up auto-send (backend/CONTEXT.md's Email
+  // Verification) means a code is usually already sitting in that inbox.
+  'verifyEmail.subtitle':
+    'We emailed a 6-digit code to {email} when you signed up, so it may already be in your inbox. Enter it below to confirm this address.',
+  'verifyEmail.codeLabel': 'Verification code',
+  'verifyEmail.confirm': 'Confirm',
+  'verifyEmail.resend': 'Resend code',
+  // {seconds} — the 60-second cooldown counting down (lib/email-verification.ts's
+  // `resendCooldownSeconds`), same interpolation style as
+  // `block.confirmTitle`'s `{name}`.
+  'verifyEmail.resendCountdown': 'Resend in {seconds}s',
+  'verifyEmail.verifiedTitle': 'Email verified',
+  'verifyEmail.verifiedNote': 'Your email address is confirmed.',
 
   'auth.or': 'or',
 

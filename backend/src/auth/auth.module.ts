@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import type { Env } from '../config/env.schema';
+import { EmailVerificationModule } from '../email-verification/email-verification.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -13,6 +14,11 @@ import { ScryptPasswordHasher } from './scrypt-password-hasher';
 @Module({
   imports: [
     UsersModule,
+    // Sign-up auto-sends the Email Verification code through here (see
+    // AuthService.sendVerificationEmailBestEffort). One direction only —
+    // EmailVerificationModule does not import AuthModule back
+    // (rules/arch-avoid-circular-deps.md).
+    EmailVerificationModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({

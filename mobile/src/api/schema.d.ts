@@ -106,6 +106,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/email-verification/request': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send (or resend) an Email Verification One-Time Code
+     * @description Emails a fresh 6-digit code, valid 24 hours, to the caller's own address in their account Locale. At most one send every 60 seconds.
+     */
+    post: operations['EmailVerificationController_requestVerification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/email-verification/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Confirm an Email Verification One-Time Code
+     * @description On success, marks the account verified and returns it. Wrong, expired, superseded, or dead (5 failed attempts) codes all report the same error — there is no way to tell which happened.
+     */
+    post: operations['EmailVerificationController_confirmVerification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/auth/sign-up': {
     parameters: {
       query?: never;
@@ -484,10 +524,19 @@ export interface components {
       locale: components['schemas']['Locale'];
       /** @description ISO 8601 */
       createdAt: string;
+      /** @description Whether the owner has confirmed an Email Verification One-Time Code (backend/CONTEXT.md — Email Verification). Gates nothing — owner-only, never shown on PublicUserDto. */
+      emailVerified: boolean;
     };
     UpdateMeDto: {
       preferredCurrency?: components['schemas']['SupportedCurrency'];
       locale?: components['schemas']['Locale'];
+    };
+    ConfirmEmailVerificationDto: {
+      /**
+       * @description The 6-digit One-Time Code emailed to the account.
+       * @example 123456
+       */
+      code: string;
     };
     SignUpDto: {
       /** @example minh@spendx.app */
@@ -892,6 +941,67 @@ export interface operations {
       };
       /** @description Unknown Username, or a Block exists between the caller and the target, either direction (same response either way — no signal). */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  EmailVerificationController_requestVerification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Email already verified */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A code was already sent within the last 60 seconds — see the Retry-After header (seconds) for how much longer to wait. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  EmailVerificationController_confirmVerification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmEmailVerificationDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PrivateUserDto'];
+        };
+      };
+      /** @description Invalid or expired code */
+      400: {
         headers: {
           [name: string]: unknown;
         };

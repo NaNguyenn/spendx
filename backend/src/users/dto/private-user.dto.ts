@@ -23,4 +23,12 @@ export class PrivateUserDto extends PublicUserDto {
 
   @ApiProperty({ description: 'ISO 8601' })
   createdAt!: string;
+
+  @ApiProperty({
+    description:
+      'Whether the owner has confirmed an Email Verification One-Time ' +
+      'Code (backend/CONTEXT.md — Email Verification). Gates nothing — ' +
+      'owner-only, never shown on PublicUserDto.',
+  })
+  emailVerified!: boolean;
 }

@@ -11,6 +11,15 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly body: unknown,
+    /**
+     * Seconds until a caller may retry, parsed from a 429's `Retry-After`
+     * header — Email Verification's resend cooldown (backend/CONTEXT.md's
+     * One-Time Code, issue #20) is the first caller that needs it.
+     * `undefined` for any other status, or when the header is missing or
+     * not a positive integer — callers that care fall back to their own
+     * default rather than trusting a value this couldn't parse.
+     */
+    readonly retryAfterSeconds?: number,
   ) {
     super(`API request failed with ${status}`);
     this.name = 'ApiError';
@@ -195,10 +204,18 @@ async function request<T>(
   const body: unknown = await parseJson(response);
 
   if (!response.ok) {
-    throw new ApiError(response.status, body);
+    throw new ApiError(response.status, body, parseRetryAfterSeconds(response));
   }
 
   return body as T;
+}
+
+/** Only the whole-seconds form of `Retry-After` — this API never sends the HTTP-date form. */
+function parseRetryAfterSeconds(response: Response): number | undefined {
+  const header = response.headers.get('Retry-After');
+  if (!header) return undefined;
+  const seconds = Number(header);
+  return Number.isInteger(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 async function parseJson(response: Response): Promise<unknown> {

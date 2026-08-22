@@ -92,6 +92,7 @@ describe('users', () => {
         email: body.email,
         preferredCurrency: body.preferredCurrency,
         locale: body.locale,
+        emailVerified: false,
       });
       expect(me.text).not.toContain('passwordHash');
     });

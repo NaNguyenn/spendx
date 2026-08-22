@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BackPill } from '@/components/back-pill';
 import { BrandMark } from '@/components/brand-mark';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -21,12 +22,23 @@ import { useTranslation } from '@/i18n/translation-context';
  * Sign In and Sign Up differ only in their fields and their buttons; keeping
  * the frame here means the next auth screen (password reset, verification)
  * inherits the layout instead of copying it a third time.
+ *
+ * `onBack` is `undefined` for Sign In/Sign Up — the entry points of the
+ * signed-out stack, nothing to go back to — and set for a pushed
+ * signed-in-stack screen that reuses this chrome (Verify Email,
+ * app/verify-email.tsx, issue #20), which draws the shared BackPill fixed
+ * above the form rather than scrolling away with the rest of it.
  */
 export function AuthScreen({
   title,
   subtitle,
+  onBack,
   children,
-}: PropsWithChildren<{ title: string; subtitle: string }>) {
+}: PropsWithChildren<{
+  title: string;
+  subtitle: string;
+  onBack?: () => void;
+}>) {
   const theme = useTheme();
 
   return (
@@ -38,6 +50,12 @@ export function AuthScreen({
         style={[styles.flex, { backgroundColor: theme.background }]}
         edges={['top', 'bottom']}
       >
+        {onBack ? (
+          <View style={styles.header}>
+            <BackPill onPress={onBack} />
+          </View>
+        ) : null}
+
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -93,6 +111,10 @@ export function FormError({ message }: { message: string | null }) {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  header: {
+    paddingHorizontal: Spacing.sp4,
+    paddingTop: Spacing.sp1,
   },
   content: {
     flexGrow: 1,

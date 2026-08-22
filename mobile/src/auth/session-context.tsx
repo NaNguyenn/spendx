@@ -61,6 +61,18 @@ interface SessionContextValue {
    * change instead of silently keeping a value the server didn't accept.
    */
   updateMe(fields: UpdateMeInput): Promise<void>;
+  /**
+   * Refetches `/users/me` and replaces `user` with the result — the one
+   * escape hatch for "something changed `user` server-side without going
+   * through `updateMe`'s own PATCH", e.g. confirming an Email Verification
+   * One-Time Code (app/verify-email.tsx, issue #20). Deliberately generic
+   * rather than a per-feature method (`markEmailVerified`, …): this context's
+   * job is the session, not every mutation that happens to touch the User
+   * row, and `PrivateUserDto` will keep growing fields future screens need
+   * to see refreshed the same way. Throws on failure like `updateMe`, so a
+   * caller can tell "confirmed but couldn't refresh" from "confirmed".
+   */
+  refreshMe(): Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -134,6 +146,13 @@ export function SessionProvider({ children }: PropsWithChildren) {
         }
         const updated = await apiPatch('/users/me', fields, { token });
         setUser(updated);
+      },
+      async refreshMe() {
+        if (!token) {
+          throw new Error('Cannot refresh account while signed out');
+        }
+        const refreshed = await apiGet('/users/me', { token });
+        setUser(refreshed);
       },
     }),
     [user, isTokenLoading, isResolvingUser, setToken, token],

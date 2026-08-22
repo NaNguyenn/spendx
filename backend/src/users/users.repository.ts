@@ -54,4 +54,12 @@ export class UsersRepository {
   update(id: string, data: UpdateUserData): Promise<User> {
     return this.prisma.user.update({ where: { id }, data });
   }
+
+  /** Stamps Email Verification (backend/CONTEXT.md) — called once, on a confirmed One-Time Code. */
+  markEmailVerified(id: string, verifiedAt: Date): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { emailVerifiedAt: verifiedAt },
+    });
+  }
 }

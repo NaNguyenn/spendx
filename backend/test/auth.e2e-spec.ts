@@ -37,6 +37,7 @@ describe('auth', () => {
         email: body.email,
         preferredCurrency: body.preferredCurrency,
         locale: body.locale,
+        emailVerified: false,
       });
 
       // The account works immediately — no verification gate — proven by
@@ -240,6 +241,7 @@ describe('auth', () => {
         email: body.email,
         preferredCurrency: body.preferredCurrency,
         locale: body.locale,
+        emailVerified: false,
       });
 
       await request(app.getHttpServer())

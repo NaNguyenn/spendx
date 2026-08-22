@@ -77,12 +77,26 @@ enum Visibility {
   @@map("visibility")
 }
 
+/// What a One-Time Code proves (see backend/CONTEXT.md — One-Time Code):
+/// Email Verification or Password Reset. See Category above for the shared
+/// slug convention. Mirrors src/domain/one-time-code-purpose.ts.
+enum OneTimeCodePurpose {
+  email_verification
+  password_reset
+
+  @@map("one_time_code_purpose")
+}
+
 /// A person with a spendx account.
 ///
 /// `passwordHash` is a self-describing scrypt string (see
 /// src/auth/scrypt-password-hasher.ts); the password itself is never stored.
 /// `preferredCurrency` and `locale` are the account-level Preferred Currency
-/// and Locale a User picks at sign-up.
+/// and Locale a User picks at sign-up. `emailVerifiedAt` is set once by
+/// EmailVerificationService on a confirmed One-Time Code (backend/CONTEXT.md
+/// — Email Verification); null means unverified, which gates nothing —
+/// the state is visible only to the owner (PrivateUserDto), never on
+/// PublicUserDto.
 model User {
   id                String            @id @default(uuid(7))
   email             String            @unique
@@ -91,6 +105,7 @@ model User {
   passwordHash      String
   preferredCurrency SupportedCurrency
   locale            Locale
+  emailVerifiedAt   DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -103,6 +118,7 @@ model User {
   likes                  Like[]
   blocksMade             Block[]         @relation("BlocksMade")
   blocksReceived         Block[]         @relation("BlocksReceived")
+  oneTimeCodes           OneTimeCode[]
 
   @@map("users")
 }
@@ -287,4 +303,35 @@ model Block {
   // above.
   @@index([blockedId])
   @@map("blocks")
+}
+
+/// A 6-digit One-Time Code emailed to a User to prove control of their email
+/// address (see backend/CONTEXT.md — One-Time Code), for exactly one
+/// Purpose: Email Verification or Password Reset. Purpose-generic machinery
+/// (src/one-time-codes) shared by both flows — neither flow's own module
+/// owns this table.
+///
+/// `codeHash` is a scrypt hash (src/auth/scrypt-password-hasher.ts) — the
+/// plain code is never persisted, only handed back once to the caller that
+/// issued it. `@@unique([userId, purpose])` makes "the live code for this
+/// User and Purpose" structurally a single row: issuing a new one is an
+/// upsert over whatever was there, which is newest-wins invalidation by
+/// construction rather than a status flag. `createdAt` has no `@default` —
+/// OneTimeCodesService supplies it from the injected CLOCK, so both the
+/// 60-second issue cooldown and `expiresAt` are computed from, and testable
+/// against, the same clock as everything else (src/clock). `failedAttempts`
+/// reaching 5 kills the code even to the correct value — confirming deletes
+/// the row on success (single-use) or increments this on a mismatch.
+model OneTimeCode {
+  id             String             @id @default(uuid(7))
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose        OneTimeCodePurpose
+  codeHash       String
+  failedAttempts Int                @default(0)
+  createdAt      DateTime
+  expiresAt      DateTime
+
+  @@unique([userId, purpose])
+  @@map("one_time_codes")
 }

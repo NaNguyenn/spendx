@@ -231,6 +231,70 @@
         "tags": ["users"]
       }
     },
+    "/email-verification/request": {
+      "post": {
+        "description": "Emails a fresh 6-digit code, valid 24 hours, to the caller's own address in their account Locale. At most one send every 60 seconds.",
+        "operationId": "EmailVerificationController_requestVerification",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Email already verified"
+          },
+          "429": {
+            "description": "A code was already sent within the last 60 seconds — see the Retry-After header (seconds) for how much longer to wait."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send (or resend) an Email Verification One-Time Code",
+        "tags": ["email-verification"]
+      }
+    },
+    "/email-verification/confirm": {
+      "post": {
+        "description": "On success, marks the account verified and returns it. Wrong, expired, superseded, or dead (5 failed attempts) codes all report the same error — there is no way to tell which happened.",
+        "operationId": "EmailVerificationController_confirmVerification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateUserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired code"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm an Email Verification One-Time Code",
+        "tags": ["email-verification"]
+      }
+    },
     "/auth/sign-up": {
       "post": {
         "description": "Works immediately — there is no verification gate.",
@@ -1070,6 +1134,10 @@
           "createdAt": {
             "type": "string",
             "description": "ISO 8601"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "Whether the owner has confirmed an Email Verification One-Time Code (backend/CONTEXT.md — Email Verification). Gates nothing — owner-only, never shown on PublicUserDto."
           }
         },
         "required": [
@@ -1079,7 +1147,8 @@
           "email",
           "preferredCurrency",
           "locale",
-          "createdAt"
+          "createdAt",
+          "emailVerified"
         ]
       },
       "UpdateMeDto": {
@@ -1100,6 +1169,17 @@
             ]
           }
         }
+      },
+      "ConfirmEmailVerificationDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "The 6-digit One-Time Code emailed to the account."
+          }
+        },
+        "required": ["code"]
       },
       "SignUpDto": {
         "type": "object",

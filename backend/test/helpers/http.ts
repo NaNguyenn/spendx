@@ -17,6 +17,7 @@ export interface AuthResponseBody {
     preferredCurrency: string;
     locale: string;
     createdAt: string;
+    emailVerified: boolean;
   };
 }
 

@@ -25,5 +25,6 @@ export function toPrivateUser(user: User): PrivateUserDto {
     preferredCurrency: user.preferredCurrency,
     locale: user.locale,
     createdAt: user.createdAt.toISOString(),
+    emailVerified: user.emailVerifiedAt !== null,
   };
 }

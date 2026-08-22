@@ -90,6 +90,10 @@ function RootNavigator() {
             same root-Stack-sibling reasoning as log-expense and
             friend/[username] above. See app/blocked-accounts.tsx. */}
         <Stack.Screen name="blocked-accounts" />
+        {/* Profile's "Email verification" row, when unverified (issue #20) —
+            a pushed screen, same root-Stack-sibling reasoning as
+            blocked-accounts above. See app/verify-email.tsx. */}
+        <Stack.Screen name="verify-email" />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

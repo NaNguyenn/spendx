@@ -150,6 +150,20 @@ export default function ProfileScreen() {
       label: t('profile.email'),
       value: user.email,
     },
+    {
+      key: 'emailVerification',
+      icon: { ios: 'checkmark.seal', android: 'verified', web: 'verified' },
+      label: t('profile.emailVerification'),
+      value: user.emailVerified
+        ? t('profile.verified')
+        : t('profile.unverified'),
+      // Verified is inert — nothing to do once confirmed (Email Verification
+      // gates nothing, backend/CONTEXT.md's Email Verification). Unverified
+      // opens the code-entry screen (app/verify-email.tsx, issue #20).
+      onPress: user.emailVerified
+        ? undefined
+        : () => router.push('/verify-email'),
+    },
   ];
 
   const safetyRows: ProfileRowItem[] = [

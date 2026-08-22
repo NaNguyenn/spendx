@@ -16,6 +16,7 @@ import {
   type PublicUserDto,
 } from '@/api/blocks';
 import { useSession } from '@/auth/session-context';
+import { BackPill } from '@/components/back-pill';
 import { FriendAvatar } from '@/components/leaderboard/friend-avatar';
 import { PrimaryButton } from '@/components/form/primary-button';
 import { ThemedText } from '@/components/themed-text';
@@ -23,12 +24,6 @@ import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
-
-const BACK_ICON: SymbolViewProps['name'] = {
-  ios: 'chevron.left',
-  android: 'chevron_left',
-  web: 'chevron_left',
-};
 
 // Same icon choice as feed-card.tsx's Block circle — see that file's own
 // comment on the lucide `ban` → SF Symbols/Material mapping.
@@ -156,17 +151,7 @@ export default function BlockedAccountsScreen() {
       edges={['top', 'bottom']}
     >
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}
-          style={[
-            styles.backButton,
-            { backgroundColor: theme.surface, borderColor: theme.border },
-          ]}
-        >
-          <SymbolView name={BACK_ICON} size={16} tintColor={theme.text} />
-        </Pressable>
+        <BackPill onPress={() => router.back()} />
         <View style={styles.titles}>
           <ThemedText numberOfLines={1} style={styles.title}>
             {t('blockedAccounts.title')}
@@ -296,14 +281,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sp4,
     paddingTop: Spacing.sp1,
     paddingBottom: Spacing.sp2,
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: Radii.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   titles: {
     flex: 1,

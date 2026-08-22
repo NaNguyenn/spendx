@@ -20,3 +20,14 @@ export class FakeEmailSender implements EmailSender {
     this.sent.length = 0;
   }
 }
+
+/**
+ * An `EmailSender` whose every send rejects — for proving a flow that sends
+ * email as a side effect (e.g. sign-up's auto Email Verification send)
+ * survives the sender being down, rather than failing the caller's request.
+ */
+export class ThrowingEmailSender implements EmailSender {
+  send(): Promise<void> {
+    return Promise.reject(new Error('simulated email sender failure'));
+  }
+}
