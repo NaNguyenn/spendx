@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
@@ -19,14 +19,15 @@ import { SecondaryButton } from '@/components/form/secondary-button';
 import { TextField } from '@/components/form/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useCountdown } from '@/hooks/use-countdown';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
+import { resendCooldownSeconds } from '@/lib/email-verification';
 import {
   RESEND_COOLDOWN_SECONDS,
-  isValidVerificationCode,
-  resendCooldownSeconds,
-} from '@/lib/email-verification';
+  isValidOneTimeCode,
+} from '@/lib/one-time-code';
 
 // Same seal used on Profile's Email verification row (app/(app)/profile.tsx)
 // for the confirmed state below — see that row's own icon-choice comment.
@@ -68,26 +69,14 @@ export default function VerifyEmailScreen() {
 
   const [isResending, setIsResending] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-
-  // Ticks the resend cooldown down to 0, one second at a time. No
-  // drift-critical precision needed (issue #20) — a fresh interval per
-  // second is simple and self-cleaning rather than a single long-lived one
-  // that needs its own elapsed-time bookkeeping.
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setInterval(() => {
-      setCooldown((seconds) => Math.max(seconds - 1, 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [cooldown]);
+  const [cooldown, setCooldown] = useCountdown(0);
 
   // Stack.Protected only mounts this route while signed in, but the type
   // stays nullable — guard defensively for the moment of sign-out itself.
   if (!user || !token) return null;
 
   const onConfirm = async () => {
-    if (!isValidVerificationCode(code)) return;
+    if (!isValidOneTimeCode(code)) return;
 
     setConfirmError(null);
     setIsConfirming(true);
@@ -180,7 +169,7 @@ export default function VerifyEmailScreen() {
         label={t('verifyEmail.confirm')}
         onPress={onConfirm}
         loading={isConfirming}
-        disabled={!isValidVerificationCode(code)}
+        disabled={!isValidOneTimeCode(code)}
       />
 
       <FormError message={resendError} />

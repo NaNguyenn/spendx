@@ -1,5 +1,6 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { useSession } from '@/auth/session-context';
 import {
@@ -11,6 +12,8 @@ import {
 import { PrimaryButton } from '@/components/form/primary-button';
 import { SecondaryButton } from '@/components/form/secondary-button';
 import { TextField } from '@/components/form/text-field';
+import { ThemedText } from '@/components/themed-text';
+import { Spacing } from '@/constants/theme';
 import { useTranslation } from '@/i18n/translation-context';
 import { getErrorMessage } from '@/lib/api-error-message';
 
@@ -18,11 +21,26 @@ export default function SignInScreen() {
   const { signIn } = useSession();
   const router = useRouter();
   const { t } = useTranslation();
+  // Set by reset-password.tsx's dismissTo after a completed Password Reset,
+  // so signing in with the new password starts from the right email.
+  const params = useLocalSearchParams<{ email?: string }>();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(params.email ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // This screen stays mounted at the bottom of the auth stack while the
+  // reset screens sit on top, so a completed reset delivers its email via
+  // navigation params, not a fresh mount — the useState seed above only
+  // covers the cold-start case. Adjusting state during render (rather than
+  // in an effect) is React's own pattern for reacting to a prop change on a
+  // mounted component.
+  const [seenParamEmail, setSeenParamEmail] = useState(params.email);
+  if (params.email !== seenParamEmail) {
+    setSeenParamEmail(params.email);
+    if (params.email) setEmail(params.email);
+  }
 
   const onSubmit = async () => {
     setError(null);
@@ -67,6 +85,16 @@ export default function SignInScreen() {
         />
       </FieldGroup>
 
+      <Pressable
+        onPress={() => router.push('/forgot-password')}
+        hitSlop={8}
+        style={styles.forgotPassword}
+      >
+        <ThemedText themeColor="accent">
+          {t('auth.signIn.forgotPassword')}
+        </ThemedText>
+      </Pressable>
+
       <FormError message={error} />
 
       <PrimaryButton
@@ -84,3 +112,10 @@ export default function SignInScreen() {
     </AuthScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginTop: Spacing.sp2,
+  },
+});

@@ -1,37 +1,7 @@
 import { ApiError } from '@/api/client';
 
-import {
-  RESEND_COOLDOWN_SECONDS,
-  isValidVerificationCode,
-  resendCooldownSeconds,
-} from './email-verification';
-
-describe('isValidVerificationCode', () => {
-  it('accepts exactly 6 digits', () => {
-    expect(isValidVerificationCode('123456')).toBe(true);
-  });
-
-  it('rejects fewer than 6 digits', () => {
-    expect(isValidVerificationCode('12345')).toBe(false);
-  });
-
-  it('rejects more than 6 digits', () => {
-    expect(isValidVerificationCode('1234567')).toBe(false);
-  });
-
-  it('rejects non-digit characters', () => {
-    expect(isValidVerificationCode('12a456')).toBe(false);
-  });
-
-  it('rejects an empty string', () => {
-    expect(isValidVerificationCode('')).toBe(false);
-  });
-
-  it('rejects whitespace padding', () => {
-    expect(isValidVerificationCode(' 123456')).toBe(false);
-    expect(isValidVerificationCode('123456 ')).toBe(false);
-  });
-});
+import { resendCooldownSeconds } from './email-verification';
+import { RESEND_COOLDOWN_SECONDS } from './one-time-code';
 
 describe('resendCooldownSeconds', () => {
   it('uses the server-reported remaining cooldown from a 429', () => {

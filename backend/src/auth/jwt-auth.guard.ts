@@ -55,6 +55,19 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
+    // Revocation-by-timestamp (docs/adr/0010): a token issued before the
+    // account's last credential change is dead, which is how a Password
+    // Reset ends every existing session. Compared at iat's own one-second
+    // resolution, so a token issued within the same second as the change —
+    // as likely the owner's fresh sign-in as anything — is not falsely
+    // revoked by iat's truncation.
+    if (
+      user.credentialsChangedAt !== null &&
+      payload.iat < Math.floor(user.credentialsChangedAt.getTime() / 1000)
+    ) {
+      throw new UnauthorizedException();
+    }
+
     request.user = { id: user.id };
     return true;
   }

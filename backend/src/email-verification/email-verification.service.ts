@@ -9,7 +9,10 @@ import { CLOCK, type Clock } from '../clock/clock';
 import type { OneTimeCodePurpose } from '../domain/one-time-code-purpose';
 import { EMAIL_SENDER, type EmailSender } from '../email/email-sender';
 import { renderEmailVerificationEmail } from '../email/templates/email-verification-email';
-import { OneTimeCodesService } from '../one-time-codes/one-time-codes.service';
+import {
+  INVALID_OR_EXPIRED_CODE_MESSAGE,
+  OneTimeCodesService,
+} from '../one-time-codes/one-time-codes.service';
 import { PrivateUserDto } from '../users/dto/private-user.dto';
 import { toPrivateUser } from '../users/user-view';
 import { UsersRepository } from '../users/users.repository';
@@ -18,8 +21,6 @@ import { UsersRepository } from '../users/users.repository';
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 
 const PURPOSE: OneTimeCodePurpose = 'email_verification';
-
-const INVALID_OR_EXPIRED_CODE_MESSAGE = 'Invalid or expired code';
 
 /**
  * Email Verification (backend/CONTEXT.md): confirming a One-Time Code marks

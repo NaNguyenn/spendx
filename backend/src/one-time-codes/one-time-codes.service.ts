@@ -20,6 +20,14 @@ export const ONE_TIME_CODE_COOLDOWN_MS = 60_000;
 /** A code dies after this many wrong guesses, even to the correct value after. */
 const MAX_FAILED_ATTEMPTS = 5;
 
+/**
+ * The one message every consumer of `confirm()` reports when it returns
+ * false. Shared (Email Verification and Password Reset both use it) so the
+ * two flows can never drift into distinguishable failure copy — the whole
+ * point of `confirm()`'s uniform `false`.
+ */
+export const INVALID_OR_EXPIRED_CODE_MESSAGE = 'Invalid or expired code';
+
 export interface IssueOneTimeCodeParams {
   userId: string;
   purpose: OneTimeCodePurpose;

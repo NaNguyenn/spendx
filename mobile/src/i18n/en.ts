@@ -250,6 +250,26 @@ export const en = {
   'verifyEmail.verifiedTitle': 'Email verified',
   'verifyEmail.verifiedNote': 'Your email address is confirmed.',
 
+  // Password Reset screens (app/(auth)/forgot-password.tsx and
+  // reset-password.tsx, issue #21) — same One-Time Code vocabulary as
+  // verifyEmail.*, but signed out.
+  'forgotPassword.title': 'Reset your password',
+  'forgotPassword.subtitle':
+    "Enter your account's email and we'll send a 6-digit reset code.",
+  'forgotPassword.emailLabel': 'Email',
+  'forgotPassword.submit': 'Send reset code',
+  // Deliberately "if it has an account", never "we sent it": the request
+  // endpoint answers identically for unknown emails (backend/CONTEXT.md —
+  // Password Reset), so this copy must not promise an email exists either.
+  'resetPassword.title': 'Enter your reset code',
+  'resetPassword.subtitle':
+    'If {email} has an account, a 6-digit code is on its way — it expires in 15 minutes. Enter it below with your new password.',
+  'resetPassword.codeLabel': 'Reset code',
+  'resetPassword.newPasswordLabel': 'New password',
+  'resetPassword.submit': 'Set new password',
+  'resetPassword.resend': 'Resend code',
+  'resetPassword.resendCountdown': 'Resend in {seconds}s',
+
   'auth.or': 'or',
 
   'auth.signIn.title': 'Welcome back',
@@ -259,6 +279,7 @@ export const en = {
   'auth.signIn.passwordLabel': 'Password',
   'auth.signIn.submit': 'Sign in',
   'auth.signIn.missingFields': 'Enter your email and password.',
+  'auth.signIn.forgotPassword': 'Forgot password?',
   'auth.signIn.createAccount': 'Create an account',
 
   'auth.signUp.title': 'Create your account',

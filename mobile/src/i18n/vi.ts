@@ -173,6 +173,20 @@ export const vi: Record<TranslationKey, string> = {
   'verifyEmail.verifiedTitle': 'Email đã được xác minh',
   'verifyEmail.verifiedNote': 'Địa chỉ email của bạn đã được xác nhận.',
 
+  'forgotPassword.title': 'Đặt lại mật khẩu',
+  'forgotPassword.subtitle':
+    'Nhập email tài khoản của bạn và chúng tôi sẽ gửi mã đặt lại gồm 6 chữ số.',
+  'forgotPassword.emailLabel': 'Email',
+  'forgotPassword.submit': 'Gửi mã đặt lại',
+  'resetPassword.title': 'Nhập mã đặt lại',
+  'resetPassword.subtitle':
+    'Nếu {email} có tài khoản, một mã 6 chữ số đang được gửi đến — mã hết hạn sau 15 phút. Nhập mã bên dưới cùng mật khẩu mới của bạn.',
+  'resetPassword.codeLabel': 'Mã đặt lại',
+  'resetPassword.newPasswordLabel': 'Mật khẩu mới',
+  'resetPassword.submit': 'Đặt mật khẩu mới',
+  'resetPassword.resend': 'Gửi lại mã',
+  'resetPassword.resendCountdown': 'Gửi lại sau {seconds}s',
+
   'auth.or': 'hoặc',
 
   'auth.signIn.title': 'Chào mừng trở lại',
@@ -182,6 +196,7 @@ export const vi: Record<TranslationKey, string> = {
   'auth.signIn.passwordLabel': 'Mật khẩu',
   'auth.signIn.submit': 'Đăng nhập',
   'auth.signIn.missingFields': 'Nhập email và mật khẩu của bạn.',
+  'auth.signIn.forgotPassword': 'Quên mật khẩu?',
   'auth.signIn.createAccount': 'Tạo tài khoản',
 
   'auth.signUp.title': 'Tạo tài khoản của bạn',

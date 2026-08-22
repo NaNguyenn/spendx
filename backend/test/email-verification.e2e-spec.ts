@@ -1,39 +1,18 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import type { Email } from '../src/email/email-sender';
 import { createTestApp } from './helpers/app';
 import { signUp } from './helpers/auth';
 import { FixedClock } from './helpers/clock';
 import { FakeEmailSender, ThrowingEmailSender } from './helpers/email-sender';
 import { authBody, errorMessage, privateUserBody } from './helpers/http';
+import { extractCode, wrongCodeFor } from './helpers/one-time-codes';
 
 // Midday ICT, well clear of any day boundary — see daily-rate-snapshot.e2e-spec.ts
 // for why the other suites pin their FixedClock the same way.
 const BASELINE_NOW = new Date('2026-08-17T05:00:00.000Z');
 
 const HOUR_MS = 60 * 60 * 1000;
-
-/**
- * Codes are read only from the fake sender's captured emails, never the
- * database (an explicit acceptance criterion for issue #20) — the templates
- * put the code on its own line (email-verification-email.ts), so this looks
- * for a line that is exactly six digits.
- */
-function extractCode(email: Email): string {
-  const match = /^(\d{6})$/m.exec(email.text);
-  if (!match) {
-    throw new Error(
-      `No 6-digit code line found in email text: ${JSON.stringify(email.text)}`,
-    );
-  }
-  return match[1];
-}
-
-/** A 6-digit code guaranteed to differ from `code`. */
-function wrongCodeFor(code: string): string {
-  return ((Number(code) + 1) % 1_000_000).toString().padStart(6, '0');
-}
 
 describe('email verification', () => {
   let app: INestApplication<App>;

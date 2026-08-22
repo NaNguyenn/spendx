@@ -6,4 +6,11 @@
  */
 export interface JwtPayload {
   sub: string;
+  /**
+   * Issued-at, in whole seconds — stamped automatically by the JWT library
+   * on every sign, so it appears here without ever being passed to
+   * `signAsync`. Read by `JwtAuthGuard` against `User.credentialsChangedAt`
+   * (docs/adr/0010) to revoke sessions issued before a credential change.
+   */
+  iat: number;
 }

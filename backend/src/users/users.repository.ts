@@ -55,6 +55,22 @@ export class UsersRepository {
     return this.prisma.user.update({ where: { id }, data });
   }
 
+  /**
+   * Replaces the password and stamps `credentialsChangedAt` in one write, so
+   * a new password can never land without the stamp that revokes the old
+   * sessions (docs/adr/0010). Called on a confirmed Password Reset.
+   */
+  changePassword(
+    id: string,
+    passwordHash: string,
+    changedAt: Date,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { passwordHash, credentialsChangedAt: changedAt },
+    });
+  }
+
   /** Stamps Email Verification (backend/CONTEXT.md) — called once, on a confirmed One-Time Code. */
   markEmailVerified(id: string, verifiedAt: Date): Promise<User> {
     return this.prisma.user.update({

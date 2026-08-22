@@ -146,6 +146,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/password-reset/request': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send a Password Reset One-Time Code
+     * @description Emails a fresh 6-digit code, valid 15 minutes, in the account Locale. Responds 204 identically whether the email is known, unknown, or inside the 60-second resend cooldown — this endpoint deliberately reveals nothing about which emails have accounts.
+     */
+    post: operations['PasswordResetController_requestReset'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/password-reset/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Confirm a Password Reset One-Time Code and set a new password
+     * @description On success, replaces the password and ends every existing session; the caller signs in with the new password — no session is issued here. Unknown email and wrong, expired, superseded, or dead codes all report the same error.
+     */
+    post: operations['PasswordResetController_confirmReset'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/auth/sign-up': {
     parameters: {
       query?: never;
@@ -537,6 +577,20 @@ export interface components {
        * @example 123456
        */
       code: string;
+    };
+    RequestPasswordResetDto: {
+      /** @example minh@spendx.app */
+      email: string;
+    };
+    ConfirmPasswordResetDto: {
+      /** @example minh@spendx.app */
+      email: string;
+      /**
+       * @description The 6-digit One-Time Code emailed to the account.
+       * @example 123456
+       */
+      code: string;
+      newPassword: string;
     };
     SignUpDto: {
       /** @example minh@spendx.app */
@@ -999,6 +1053,55 @@ export interface operations {
         content: {
           'application/json': components['schemas']['PrivateUserDto'];
         };
+      };
+      /** @description Invalid or expired code */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PasswordResetController_requestReset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RequestPasswordResetDto'];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PasswordResetController_confirmReset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmPasswordResetDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Invalid or expired code */
       400: {

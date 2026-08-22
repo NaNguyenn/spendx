@@ -295,6 +295,57 @@
         "tags": ["email-verification"]
       }
     },
+    "/password-reset/request": {
+      "post": {
+        "description": "Emails a fresh 6-digit code, valid 15 minutes, in the account Locale. Responds 204 identically whether the email is known, unknown, or inside the 60-second resend cooldown — this endpoint deliberately reveals nothing about which emails have accounts.",
+        "operationId": "PasswordResetController_requestReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Send a Password Reset One-Time Code",
+        "tags": ["password-reset"]
+      }
+    },
+    "/password-reset/confirm": {
+      "post": {
+        "description": "On success, replaces the password and ends every existing session; the caller signs in with the new password — no session is issued here. Unknown email and wrong, expired, superseded, or dead codes all report the same error.",
+        "operationId": "PasswordResetController_confirmReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid or expired code"
+          }
+        },
+        "summary": "Confirm a Password Reset One-Time Code and set a new password",
+        "tags": ["password-reset"]
+      }
+    },
     "/auth/sign-up": {
       "post": {
         "description": "Works immediately — there is no verification gate.",
@@ -1180,6 +1231,36 @@
           }
         },
         "required": ["code"]
+      },
+      "RequestPasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "minh@spendx.app"
+          }
+        },
+        "required": ["email"]
+      },
+      "ConfirmPasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "minh@spendx.app"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "The 6-digit One-Time Code emailed to the account."
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        },
+        "required": ["email", "code", "newPassword"]
       },
       "SignUpDto": {
         "type": "object",

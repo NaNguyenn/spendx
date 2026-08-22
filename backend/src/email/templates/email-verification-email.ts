@@ -1,12 +1,8 @@
 import type { Locale } from '../../domain/locale';
+import type { RenderedEmail } from './rendered-email';
 
 export interface EmailVerificationEmailParams {
   code: string;
-}
-
-export interface RenderedEmail {
-  subject: string;
-  text: string;
 }
 
 /**

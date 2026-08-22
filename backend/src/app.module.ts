@@ -19,6 +19,7 @@ import { FriendsModule } from './friends/friends.module';
 import { HealthModule } from './health/health.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { LikesModule } from './likes/likes.module';
+import { PasswordResetModule } from './password-reset/password-reset.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
@@ -54,6 +55,7 @@ import { UsersModule } from './users/users.module';
     BlocksModule,
     UsersModule,
     EmailVerificationModule,
+    PasswordResetModule,
     AuthModule,
     ExpensesModule,
     FriendsModule,
